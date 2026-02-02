@@ -925,9 +925,8 @@
                 // 기존 시스템 호환
                 if (userData.role === 'admin') {
                     window.location.href = 'admin.html';
-                } else if (userData.isEvaluator === true) {
-                    window.location.href = 'leader.html';
                 } else {
+                    // 리더/일반 사용자 모두 dashboard.html 사용
                     window.location.href = 'dashboard.html';
                 }
                 return;
@@ -941,13 +940,8 @@
                 return;
             }
 
-            // 리더 권한 확인
-            if (roles.includes('firstReviewer') || roles.includes('secondReviewer') || roles.includes('thirdReviewer')) {
-                window.location.href = 'leader.html';
-                return;
-            }
-
-            // 일반 사용자는 dashboard로
+            // 리더/일반 사용자 모두 dashboard.html 사용
+            // dashboard.html에서 권한에 따라 결재 관리 메뉴 표시
             window.location.href = 'dashboard.html';
         }
     </script>
