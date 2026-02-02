@@ -301,6 +301,23 @@
             background: #f59e0b;
         }
 
+        .capslock-warning {
+            display: none;
+            color: #f59e0b;
+            font-size: 12px;
+            margin-top: 6px;
+            padding: 8px 12px;
+            background: #fef3c7;
+            border: 1px solid #fcd34d;
+            border-radius: 6px;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .capslock-warning.show {
+            display: flex;
+        }
+
         @media (max-width: 768px) {
             .container {
                 flex-direction: column;
@@ -368,8 +385,13 @@
                         </div>
                         <div class="form-group">
                             <label class="form-label">비밀번호</label>
-                            <input type="password" class="form-control" name="password" required
-                                placeholder="비밀번호를 입력하세요">
+                            <input type="password" class="form-control" name="password" id="loginPassword" required
+                                placeholder="비밀번호를 입력하세요"
+                                onkeyup="checkCapsLock(event, 'loginCapsWarning')"
+                                onkeydown="checkCapsLock(event, 'loginCapsWarning')">
+                            <div class="capslock-warning" id="loginCapsWarning">
+                                <span>⚠️</span> Caps Lock이 켜져 있습니다
+                            </div>
                             <small style="color: #6c757d; font-size: 12px; margin-top: 5px; display: block;">
                                 초기 비밀번호: ajupharm
                             </small>
@@ -426,14 +448,24 @@
                     <label class="form-label" style="display: block; margin-bottom: 8px; font-weight: 600;">새 비밀번호 (6자 이상)</label>
                     <input type="password" class="form-control" id="newPassword" required minlength="6"
                         placeholder="새 비밀번호를 입력하세요"
-                        style="width: 100%; padding: 12px; border: 2px solid #e9ecef; border-radius: 8px; font-size: 14px;">
+                        style="width: 100%; padding: 12px; border: 2px solid #e9ecef; border-radius: 8px; font-size: 14px;"
+                        onkeyup="checkCapsLock(event, 'newPwdCapsWarning')"
+                        onkeydown="checkCapsLock(event, 'newPwdCapsWarning')">
+                    <div class="capslock-warning" id="newPwdCapsWarning">
+                        <span>⚠️</span> Caps Lock이 켜져 있습니다
+                    </div>
                 </div>
-                
+
                 <div class="form-group" style="margin-bottom: 30px;">
                     <label class="form-label" style="display: block; margin-bottom: 8px; font-weight: 600;">비밀번호 확인</label>
                     <input type="password" class="form-control" id="confirmPassword" required minlength="6"
                         placeholder="비밀번호를 다시 입력하세요"
-                        style="width: 100%; padding: 12px; border: 2px solid #e9ecef; border-radius: 8px; font-size: 14px;">
+                        style="width: 100%; padding: 12px; border: 2px solid #e9ecef; border-radius: 8px; font-size: 14px;"
+                        onkeyup="checkCapsLock(event, 'confirmPwdCapsWarning')"
+                        onkeydown="checkCapsLock(event, 'confirmPwdCapsWarning')">
+                    <div class="capslock-warning" id="confirmPwdCapsWarning">
+                        <span>⚠️</span> Caps Lock이 켜져 있습니다
+                    </div>
                 </div>
                 
                 <button type="submit" class="btn btn-primary" style="width: 100%; padding: 16px; background: linear-gradient(135deg, #0ea5e9 0%, #2dd4bf 100%); border: none; border-radius: 12px; color: white; font-weight: 600; cursor: pointer; font-size: 16px; box-shadow: 0 4px 15px rgba(14, 165, 233, 0.3); transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);">
@@ -503,6 +535,16 @@
                 }
             }
         });
+
+        // Caps Lock 감지
+        function checkCapsLock(event, warningId) {
+            const warning = document.getElementById(warningId);
+            if (event.getModifierState && event.getModifierState('CapsLock')) {
+                warning.classList.add('show');
+            } else {
+                warning.classList.remove('show');
+            }
+        }
 
         // 탭 전환
         function switchTab(tabName, event) {
