@@ -682,41 +682,11 @@
                 </div>
             </div>
 
-            <!-- 제안서 작성 섹션 -->
-            <div id="newSuggestion" class="content-section">
-                <div class="page-header">
-                    <h1>✍️ 제안서 작성</h1>
-                    <p>새로운 제안서를 작성하세요</p>
-                </div>
-                <div class="card">
-                    <div class="card-body" style="text-align: center; padding: 60px 20px;">
-                        <p style="font-size: 16px; color: #666; margin-bottom: 30px;">
-                            제안서 작성은 대시보드 페이지에서 가능합니다.
-                        </p>
-                        <a href="dashboard.html" class="btn btn-primary" style="font-size: 16px; padding: 12px 30px;">
-                            대시보드로 이동하여 제안서 작성하기
-                        </a>
-                    </div>
-                </div>
-            </div>
+            <!-- 제안서 작성 섹션 - showSection에서 대시보드로 자동 이동 -->
+            <div id="newSuggestion" class="content-section"></div>
 
-            <!-- 내 제안 섹션 -->
-            <div id="mySuggestions" class="content-section">
-                <div class="page-header">
-                    <h1>📝 내 제안</h1>
-                    <p>내가 작성한 제안서 목록입니다</p>
-                </div>
-                <div class="card">
-                    <div class="card-body" style="text-align: center; padding: 60px 20px;">
-                        <p style="font-size: 16px; color: #666; margin-bottom: 30px;">
-                            내 제안 목록은 대시보드 페이지에서 확인할 수 있습니다.
-                        </p>
-                        <a href="dashboard.html" class="btn btn-primary" style="font-size: 16px; padding: 12px 30px;">
-                            대시보드로 이동하여 내 제안 보기
-                        </a>
-                    </div>
-                </div>
-            </div>
+            <!-- 내 제안 섹션 - showSection에서 대시보드로 자동 이동 -->
+            <div id="mySuggestions" class="content-section"></div>
 
             <!-- 결재 대기 섹션 -->
             <div id="pending" class="content-section">
@@ -2167,6 +2137,16 @@
         }
 
         function showSection(sectionId) {
+            // 제안서 작성/내 제안은 대시보드로 바로 이동
+            if (sectionId === 'newSuggestion') {
+                window.location.href = 'dashboard.html?action=newSuggestion';
+                return;
+            }
+            if (sectionId === 'mySuggestions') {
+                window.location.href = 'dashboard.html?action=mySuggestions';
+                return;
+            }
+
             // 모든 섹션 숨기기
             document.querySelectorAll('.content-section').forEach(section => {
                 section.classList.remove('active');

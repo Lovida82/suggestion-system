@@ -870,8 +870,9 @@
 
                                     <div class="form-group">
                                         <label class="form-label">예상 절감 금액 (원/년) *</label>
-                                        <input type="number" class="form-control" id="expectedSaving" name="expectedSaving"
-                                            placeholder="예: 1000000" min="0" oninput="formatSavingAmount(); calculateSelfScore();">
+                                        <input type="text" class="form-control" id="expectedSaving" name="expectedSaving"
+                                            placeholder="예: 1,000,000" inputmode="numeric"
+                                            oninput="formatSavingInput(this); calculateSelfScore();">
                                         <div id="savingAmountDisplay" style="margin-top: 5px; color: #28a745; font-weight: 600;"></div>
                                     </div>
 
@@ -1345,6 +1346,15 @@
                 await loadMasterData();
                 loadInitialData();
                 initializeForm();
+
+                // URL 파라미터로 특정 섹션 자동 열기
+                const urlParams = new URLSearchParams(window.location.search);
+                const action = urlParams.get('action');
+                if (action === 'newSuggestion') {
+                    showSection('newSuggestion');
+                } else if (action === 'mySuggestions') {
+                    showSection('mySuggestions');
+                }
             } catch (error) {
                 console.error('❌ 사용자 정보 로드 오류:', error);
                 console.error('오류 스택:', error.stack);
@@ -1636,7 +1646,7 @@
                 let effectScore = 0;
                 if (hasTypicalEffect) {
                     // 유형효과가 있는 경우: 금액 기반 점수 계산
-                    const expectedSaving = parseInt(document.getElementById('expectedSaving')?.value) || 0;
+                    const expectedSaving = parseInt(document.getElementById('expectedSaving')?.value?.replace(/[^\d]/g, '')) || 0;
                     effectScore = calculateTangibleEffectScore(expectedSaving);
                 } else {
                     // 무형효과만 있는 경우: 품질과 안전 중 더 높은 점수 사용
@@ -1992,7 +2002,10 @@
                     }
 
                     const expectedSaving = document.getElementById('expectedSaving');
-                    if (expectedSaving) expectedSaving.value = editingData.expectedSaving || '';
+                    if (expectedSaving) {
+                        const amount = editingData.expectedSaving || 0;
+                        expectedSaving.value = amount ? parseInt(amount).toLocaleString('ko-KR') : '';
+                    }
 
                     const savingBasis = document.getElementById('savingBasis');
                     if (savingBasis) savingBasis.value = editingData.savingBasis || '';
@@ -2117,7 +2130,7 @@
                 
                 // 유형효과 데이터
                 const hasTypicalEffect = document.querySelector('input[name="hasTypicalEffect"]:checked').value === 'yes';
-                const expectedSaving = hasTypicalEffect ? (parseInt(document.getElementById('expectedSaving').value) || 0) : 0;
+                const expectedSaving = hasTypicalEffect ? (parseInt(document.getElementById('expectedSaving').value.replace(/[^\d]/g, '')) || 0) : 0;
                 const savingBasis = hasTypicalEffect ? (document.getElementById('savingBasis').value || '') : '';
 
                 // 유형효과 검증 필요 여부 확인
@@ -2397,7 +2410,7 @@
 
                 // 유형효과 정보
                 const hasTypicalEffect = document.querySelector('input[name="hasTypicalEffect"]:checked')?.value === 'yes';
-                const expectedSaving = hasTypicalEffect ? (parseInt(document.getElementById('expectedSaving')?.value) || 0) : 0;
+                const expectedSaving = hasTypicalEffect ? (parseInt(document.getElementById('expectedSaving')?.value?.replace(/[^\d]/g, '')) || 0) : 0;
                 const savingBasis = hasTypicalEffect ? (document.getElementById('savingBasis')?.value || '') : '';
 
                 // 파일 업로드 (있는 경우)
@@ -3266,10 +3279,27 @@
             }
         }
 
-        // 금액 포맷팅
+        // 금액 입력 시 천 단위 쉼표 자동 추가
+        function formatSavingInput(input) {
+            // 숫자만 추출
+            let value = input.value.replace(/[^\d]/g, '');
+
+            // 천 단위 쉼표 추가
+            if (value) {
+                value = parseInt(value).toLocaleString('ko-KR');
+            }
+
+            input.value = value;
+
+            // 금액 표시 업데이트
+            formatSavingAmount();
+        }
+
+        // 금액 포맷팅 및 점수 표시
         function formatSavingAmount() {
             const input = document.getElementById('expectedSaving');
-            const amount = parseInt(input.value) || 0;
+            // 쉼표 제거 후 숫자로 변환
+            const amount = parseInt(input.value.replace(/[^\d]/g, '')) || 0;
             const display = document.getElementById('savingAmountDisplay');
 
             if (amount > 0) {
@@ -3278,6 +3308,12 @@
             } else {
                 display.textContent = '';
             }
+        }
+
+        // 금액 입력값에서 숫자만 추출하는 헬퍼 함수
+        function getSavingAmount() {
+            const input = document.getElementById('expectedSaving');
+            return parseInt(input.value.replace(/[^\d]/g, '')) || 0;
         }
 
         // 산출 근거 글자수 카운트
