@@ -1538,6 +1538,16 @@
                 loadInitialData();
                 initializeForm();
 
+                // 결재자인 경우 결재 대기 목록 미리 로드 (배지 업데이트용)
+                const isApprover = currentUser.roles && (
+                    currentUser.roles.includes('firstReviewer') ||
+                    currentUser.roles.includes('secondReviewer') ||
+                    currentUser.roles.includes('thirdReviewer')
+                );
+                if (isApprover) {
+                    loadPendingSuggestions();
+                }
+
                 // URL 파라미터로 특정 페이지 자동 열기
                 const urlParams = new URLSearchParams(window.location.search);
                 const action = urlParams.get('action');
@@ -3613,8 +3623,18 @@
                     return;
                 }
 
+                // 유형효과 검증이 필요하지만 아직 완료되지 않은 제안서 필터링
+                // (검증 완료 후에만 결재 대기 목록에 표시)
+                const filteredDocs = snapshot.docs.filter(doc => {
+                    const data = doc.data();
+                    // 유형효과가 없으면 바로 표시
+                    if (!data.hasTypicalEffect) return true;
+                    // 유형효과가 있으면 검증 완료된 것만 표시
+                    return data.effectVerification && data.effectVerification.status === 'completed';
+                });
+
                 // 클라이언트에서 정렬
-                const myPending = snapshot.docs.sort((a, b) => {
+                const myPending = filteredDocs.sort((a, b) => {
                     const timeA = a.data().createdAt?.toDate?.() || new Date(0);
                     const timeB = b.data().createdAt?.toDate?.() || new Date(0);
                     return timeB - timeA; // 최신순
@@ -3853,7 +3873,7 @@
 
                     // 유형효과 검증 정보 표시
                     const verificationSection = document.getElementById('verificationInfoSection');
-                    if (data.hasTypicalEffect && data.effectVerification && data.effectVerification.status === 'verified') {
+                    if (data.hasTypicalEffect && data.effectVerification && data.effectVerification.status === 'completed') {
                         verificationSection.style.display = 'block';
 
                         document.getElementById('modalOriginalAmount').textContent =
