@@ -1,0 +1,2236 @@
+<!DOCTYPE html>
+<!--
+================================================================================
+제안제도 시스템 - 리더 대시보드
+================================================================================
+
+변경 이력:
+--------------------------------------------------------------------------------
+버전: 2.1.0
+날짜: 2025-01-27
+작성자: Claude AI Assistant
+
+[주요 변경 사항]
+
+1. 자체평가 표시 간소화
+   - 위치: 평가 모달 (라인 851-867)
+   - 변경 전: 노력도/창의성/유무형효과 개별 점수 표시
+   - 변경 후: 총점과 등급만 표시
+   - 사유: 평가자에게 필요한 핵심 정보만 제공
+   - 영향: UI 간결화 및 평가 집중도 향상
+
+2. 평가항목 텍스트 상세화
+   - 위치: 노력도 (라인 876-887), 창의성 (라인 890-902)
+   - 노력도: 일수 기준 명시
+     * 30점: 8일 이상의 노력, 매우 높은 업무 난이도
+     * 25점: 4~7일 정도의 노력, 높은 업무 난이도
+     * 20점: 2~3일 정도의 노력
+     * 15점: 1일 정도의 노력
+     * 10점: 1일 이하의 노력
+     * 0점: 노력 미흡
+   - 창의성: 유사 사례 기준 명시
+     * 15점: 업계 최초의 혁신적 아이디어
+     * 12점: 타 회사에 유사 사례가 있음 (최초 도입)
+     * 10점: 우리 팀에 유사 사례가 있음
+     * 7점: 타 팀에 유사 사례가 있음
+     * 5점: 창의성 낮음
+     * 0점: 창의성 없음
+   - 영향: 평가 기준의 객관성 및 일관성 확보
+
+3. 유형효과 검증 결과 표시 기능 추가
+   - 위치: 평가 모달 (라인 869-891), 표시 로직 (라인 1643-1664)
+   - 내용: 유형효과 검증이 완료된 제안서의 경우 검증 정보 표시
+   - 표시 정보:
+     * 제안자 예상 금액
+     * 검증자 확정 금액 (강조 표시)
+     * 검증 의견
+     * 검증자 정보 (이름, 검증일)
+   - 조건: hasTypicalEffect === true && effectVerification.status === 'verified'
+   - 영향: 평가자가 검증된 금액을 기준으로 평가 가능
+
+4. 오류 수정
+   - 반려 버튼 오류 수정 (라인 1828)
+     * 문제: reviewScore 요소가 없어서 발생하는 오류
+     * 해결: 반려 시 점수를 0으로 고정
+   - loadAllData 함수 추가 (라인 1579-1585)
+     * 문제: 승인/수정요청 후 loadAllData 함수가 없어서 발생하는 오류
+     * 해결: 모든 데이터를 다시 로드하는 loadAllData 함수 구현
+     * 영향: 승인/수정요청 버튼 정상 작동
+
+[기술적 변경]
+- loadAllData() 함수 신규 추가
+- 자체평가 표시 UI 구조 변경
+- 검증 정보 섹션 추가 (verificationInfoSection)
+- 평가 항목 option 값 및 텍스트 개선
+
+[버그 수정]
+- 반려 버튼 클릭 시 "Cannot read properties of null (reading 'value')" 오류 해결
+- 수정요청 버튼 클릭 시 "loadAllData is not defined" 오류 해결
+- 승인 버튼 클릭 시 "loadAllData is not defined" 오류 해결
+
+[호환성]
+- 기존 제안서 데이터와 호환
+- Firestore 스키마 변경 없음
+- effectVerification 필드가 없는 기존 제안서도 정상 처리
+
+================================================================================
+-->
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>리더 시스템 - 제안제도</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+
+        .container {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* 모바일 헤더 */
+        .mobile-header {
+            display: none;
+            background: white;
+            padding: 15px 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .menu-toggle {
+            background: none;
+            border: none;
+            font-size: 20px;
+            cursor: pointer;
+        }
+
+        /* 사이드바 */
+        .sidebar {
+            width: 280px;
+            background: white;
+            box-shadow: 2px 0 15px rgba(0,0,0,0.1);
+            padding: 0;
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+            z-index: 1000;
+            transition: transform 0.3s ease;
+        }
+
+        .sidebar-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px 25px;
+            text-align: center;
+        }
+
+        .sidebar-header h2 {
+            font-size: 20px;
+            margin-bottom: 10px;
+        }
+
+        .user-info {
+            opacity: 0.9;
+            font-size: 14px;
+        }
+
+        .nav-menu {
+            padding: 20px 0;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+            padding: 15px 25px;
+            background: none;
+            border: none;
+            text-align: left;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: #495057;
+        }
+
+        .nav-item:hover {
+            background: #f8f9fa;
+            color: #667eea;
+        }
+
+        .nav-item.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .badge {
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .badge-danger {
+            background: #dc3545;
+            color: white;
+        }
+
+        .badge-warning {
+            background: #ffc107;
+            color: #000;
+        }
+
+        .badge-success {
+            background: #28a745;
+            color: white;
+        }
+
+        .badge-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .badge-info {
+            background: #17a2b8;
+            color: white;
+        }
+
+        /* 메인 콘텐츠 */
+        .main-content {
+            flex: 1;
+            margin-left: 280px;
+            padding: 40px;
+        }
+
+        .page-header {
+            margin-bottom: 30px;
+        }
+
+        .page-header h1 {
+            color: white;
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+
+        .page-header p {
+            color: rgba(255,255,255,0.9);
+            font-size: 16px;
+        }
+
+        /* 통계 카드 */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .stat-card h3 {
+            font-size: 14px;
+            color: #6c757d;
+            margin-bottom: 10px;
+        }
+
+        .stat-card .number {
+            font-size: 36px;
+            font-weight: 600;
+            color: #667eea;
+        }
+
+        /* 카드 */
+        .card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .card-header {
+            padding: 20px 25px;
+            border-bottom: 1px solid #e9ecef;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .card-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .card-body {
+            padding: 25px;
+        }
+
+        /* 테이블 */
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .table th {
+            background: #f8f9fa;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            color: #495057;
+            font-size: 14px;
+            border-bottom: 2px solid #dee2e6;
+        }
+
+        .table td {
+            padding: 15px 12px;
+            border-bottom: 1px solid #e9ecef;
+            font-size: 14px;
+        }
+
+        .table tr:hover {
+            background: #f8f9fa;
+        }
+
+        /* 버튼 */
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #218838;
+        }
+
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #c82333;
+        }
+
+        .btn-warning {
+            background: #ffc107;
+            color: #000;
+        }
+
+        .btn-warning:hover {
+            background: #e0a800;
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+
+        .btn-sm {
+            padding: 6px 12px;
+            font-size: 12px;
+        }
+
+        /* 콘텐츠 섹션 */
+        .content-section {
+            display: none;
+        }
+
+        .content-section.active {
+            display: block;
+        }
+
+        /* 모달 */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.show {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            max-width: 800px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            margin-bottom: 20px;
+        }
+
+        .modal-header h3 {
+            font-size: 24px;
+            color: #333;
+        }
+
+        .modal-body {
+            margin-bottom: 20px;
+        }
+
+        .modal-footer {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        .close-btn {
+            float: right;
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #999;
+        }
+
+        /* 폼 */
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+            font-size: 14px;
+        }
+
+        .form-input, .form-textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        .form-input:focus, .form-textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .form-textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        /* 정보 박스 */
+        .info-box {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            border-left: 4px solid #667eea;
+        }
+
+        .info-box strong {
+            color: #667eea;
+        }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: white;
+            padding: 15px 25px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 3000;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.3s;
+        }
+
+        .toast.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .toast.success {
+            border-left: 4px solid #28a745;
+        }
+
+        .toast.error {
+            border-left: 4px solid #dc3545;
+        }
+
+        .toast.info {
+            border-left: 4px solid #17a2b8;
+        }
+
+        /* 로그아웃 버튼 */
+        .logout-btn {
+            width: 100%;
+            padding: 12px;
+            margin-top: 20px;
+            background: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        .logout-btn:hover {
+            background: #c82333;
+        }
+
+        /* 반응형 */
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-100%);
+            }
+
+            .sidebar.open {
+                transform: translateX(0);
+            }
+
+            .main-content {
+                margin-left: 0;
+                padding: 80px 20px 20px;
+            }
+
+            .mobile-header {
+                display: flex;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .table {
+                font-size: 12px;
+            }
+
+            .table th, .table td {
+                padding: 8px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 모바일 헤더 -->
+    <div class="mobile-header">
+        <button class="menu-toggle" onclick="toggleSidebar()">☰</button>
+        <h2 style="font-size: 18px;">리더 시스템</h2>
+        <div style="width: 30px;"></div>
+    </div>
+
+    <!-- 사이드바 오버레이 -->
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+
+    <div class="container">
+        <!-- 사이드바 -->
+        <div class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <h2>✍️ 리더 시스템</h2>
+                <div class="user-info" id="userInfo">
+                    로딩 중...
+                </div>
+            </div>
+
+            <div class="nav-menu">
+                <button class="nav-item active" onclick="showSection('dashboard')">
+                    <span>📊 대시보드</span>
+                </button>
+                <button class="nav-item" onclick="showSection('newSuggestion')">
+                    <span>✍️ 제안서 작성</span>
+                </button>
+                <button class="nav-item" onclick="showSection('mySuggestions')">
+                    <span>📝 내 제안</span>
+                </button>
+                <button class="nav-item" onclick="showSection('pending')">
+                    <span>⏰ 결재 대기</span>
+                    <span class="badge badge-danger" id="pendingCount">0</span>
+                </button>
+                <button class="nav-item" onclick="showSection('reviewing')">
+                    <span>📋 검토 중</span>
+                    <span class="badge badge-warning" id="reviewingCount">0</span>
+                </button>
+                <button class="nav-item" onclick="showSection('completed')">
+                    <span>✅ 처리 완료</span>
+                </button>
+                <button class="nav-item" onclick="showSection('allSuggestions')">
+                    <span>📋 전체 제안</span>
+                </button>
+                <button class="nav-item" onclick="showSection('stats')">
+                    <span>📊 통계</span>
+                </button>
+            </div>
+
+            <div style="padding: 0 20px;">
+                <button class="logout-btn" onclick="logout()">로그아웃</button>
+            </div>
+        </div>
+
+        <!-- 메인 콘텐츠 -->
+        <div class="main-content">
+            <!-- 대시보드 섹션 -->
+            <div id="dashboard" class="content-section active">
+                <div class="page-header">
+                    <h1>📊 대시보드</h1>
+                    <p>나의 결재 현황을 확인하세요</p>
+                </div>
+
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <h3>결재 대기</h3>
+                        <div class="number" id="statPending">0</div>
+                        <p style="color: #999; font-size: 12px; margin-top: 5px;">즉시 검토 필요</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>이번 주 처리</h3>
+                        <div class="number" style="color: #28a745;" id="statWeek">0</div>
+                        <p style="color: #999; font-size: 12px; margin-top: 5px;">최근 7일</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>이번 달 처리</h3>
+                        <div class="number" style="color: #17a2b8;" id="statMonth">0</div>
+                        <p style="color: #999; font-size: 12px; margin-top: 5px;">이번 달 총합</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>평균 처리 시간</h3>
+                        <div class="number" style="color: #ffc107; font-size: 28px;" id="statAvgTime">0일</div>
+                        <p style="color: #999; font-size: 12px; margin-top: 5px;">제출~승인</p>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">최근 결재 대기 제안서</h3>
+                        <button class="btn btn-primary btn-sm" onclick="showSection('pending')">전체 보기</button>
+                    </div>
+                    <div class="card-body">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>제안번호</th>
+                                    <th>제안자</th>
+                                    <th>부서</th>
+                                    <th>제안내용</th>
+                                    <th>접수일</th>
+                                    <th>작업</th>
+                                </tr>
+                            </thead>
+                            <tbody id="recentPendingList">
+                                <tr>
+                                    <td colspan="6" style="text-align: center; padding: 40px; color: #999;">
+                                        결재 대기 중인 제안서가 없습니다.
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 제안서 작성 섹션 -->
+            <div id="newSuggestion" class="content-section">
+                <div class="page-header">
+                    <h1>✍️ 제안서 작성</h1>
+                    <p>새로운 제안서를 작성하세요</p>
+                </div>
+                <div class="card">
+                    <div class="card-body" style="text-align: center; padding: 60px 20px;">
+                        <p style="font-size: 16px; color: #666; margin-bottom: 30px;">
+                            제안서 작성은 대시보드 페이지에서 가능합니다.
+                        </p>
+                        <a href="dashboard.html" class="btn btn-primary" style="font-size: 16px; padding: 12px 30px;">
+                            대시보드로 이동하여 제안서 작성하기
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 내 제안 섹션 -->
+            <div id="mySuggestions" class="content-section">
+                <div class="page-header">
+                    <h1>📝 내 제안</h1>
+                    <p>내가 작성한 제안서 목록입니다</p>
+                </div>
+                <div class="card">
+                    <div class="card-body" style="text-align: center; padding: 60px 20px;">
+                        <p style="font-size: 16px; color: #666; margin-bottom: 30px;">
+                            내 제안 목록은 대시보드 페이지에서 확인할 수 있습니다.
+                        </p>
+                        <a href="dashboard.html" class="btn btn-primary" style="font-size: 16px; padding: 12px 30px;">
+                            대시보드로 이동하여 내 제안 보기
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 결재 대기 섹션 -->
+            <div id="pending" class="content-section">
+                <div class="page-header">
+                    <h1>⏰ 결재 대기</h1>
+                    <p>내가 결재해야 할 제안서 목록입니다</p>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">결재 대기 제안서</h3>
+                        <button class="btn btn-secondary btn-sm" onclick="loadPendingSuggestions()">🔄 새로고침</button>
+                    </div>
+                    <div class="card-body">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 120px;">제안번호</th>
+                                    <th style="width: 100px;">제안자</th>
+                                    <th style="width: 100px;">부서</th>
+                                    <th>제안내용</th>
+                                    <th style="width: 100px;">접수일</th>
+                                    <th style="width: 80px;">자체평가</th>
+                                    <th style="width: 150px;">작업</th>
+                                </tr>
+                            </thead>
+                            <tbody id="pendingList">
+                                <tr>
+                                    <td colspan="7" style="text-align: center; padding: 40px; color: #999;">
+                                        로딩 중...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 검토 중 섹션 -->
+            <div id="reviewing" class="content-section">
+                <div class="page-header">
+                    <h1>📋 검토 중</h1>
+                    <p>다음 결재자 검토 대기 중인 제안서입니다</p>
+                </div>
+
+                <div class="card">
+                    <div class="card-body">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>제안번호</th>
+                                    <th>제안자</th>
+                                    <th>제안내용</th>
+                                    <th>나의 결재</th>
+                                    <th>현재 단계</th>
+                                    <th>작업</th>
+                                </tr>
+                            </thead>
+                            <tbody id="reviewingList">
+                                <tr>
+                                    <td colspan="6" style="text-align: center; padding: 40px; color: #999;">
+                                        로딩 중...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 처리 완료 섹션 -->
+            <div id="completed" class="content-section">
+                <div class="page-header">
+                    <h1>✅ 처리 완료</h1>
+                    <p>내가 처리한 제안서 목록입니다</p>
+                </div>
+
+                <div class="card">
+                    <div class="card-body">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>제안번호</th>
+                                    <th>제안자</th>
+                                    <th>제안내용</th>
+                                    <th>나의 평가</th>
+                                    <th>최종 상태</th>
+                                    <th>처리일</th>
+                                    <th>작업</th>
+                                </tr>
+                            </thead>
+                            <tbody id="completedList">
+                                <tr>
+                                    <td colspan="7" style="text-align: center; padding: 40px; color: #999;">
+                                        로딩 중...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 전체 제안 섹션 -->
+            <div id="allSuggestions" class="content-section">
+                <div class="page-header">
+                    <h1>📋 전체 제안</h1>
+                    <p>모든 사용자의 제안서 목록입니다</p>
+                </div>
+
+                <div class="card">
+                    <div class="card-body">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>제안번호</th>
+                                    <th>제안자</th>
+                                    <th>부서</th>
+                                    <th>제안내용</th>
+                                    <th>상태</th>
+                                    <th>접수일</th>
+                                    <th>작업</th>
+                                </tr>
+                            </thead>
+                            <tbody id="allSuggestionsList">
+                                <tr>
+                                    <td colspan="7" style="text-align: center; padding: 40px; color: #999;">
+                                        로딩 중...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 통계 섹션 -->
+            <div id="stats" class="content-section">
+                <div class="page-header">
+                    <h1>📊 통계</h1>
+                    <p>나의 결재 활동 통계입니다</p>
+                </div>
+
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <h3>총 처리 건수</h3>
+                        <div class="number" id="statsTotal">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>승인 건수</h3>
+                        <div class="number" style="color: #28a745;" id="statsApproved">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>반려 건수</h3>
+                        <div class="number" style="color: #dc3545;" id="statsRejected">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>승인율</h3>
+                        <div class="number" style="color: #17a2b8;" id="statsApprovalRate">0%</div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">월별 처리 현황</h3>
+                    </div>
+                    <div class="card-body">
+                        <div id="monthlyStats" style="min-height: 200px; display: flex; align-items: center; justify-content: center; color: #999;">
+                            통계를 계산하는 중...
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 평가 모달 -->
+    <div id="reviewModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>제안서 평가</h3>
+                <button class="close-btn" onclick="closeReviewModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <!-- 제안서 정보 -->
+                <div class="info-box">
+                    <strong>제안번호:</strong> <span id="modalSugNumber"></span><br>
+                    <strong>제안자:</strong> <span id="modalProposer"></span><br>
+                    <strong>부서:</strong> <span id="modalDepartment"></span><br>
+                    <strong>접수일:</strong> <span id="modalSubmitDate"></span>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">제안내용</label>
+                    <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+                        <p id="modalTitle" style="font-weight: 600; margin-bottom: 10px;"></p>
+                        <p id="modalCurrentSituation" style="color: #666; font-size: 14px;"></p>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">변경(신규)내용</label>
+                    <div style="background: #f8f9fa; padding: 15px; border-radius: 8px;">
+                        <p id="modalImprovementPlan" style="color: #666; font-size: 14px;"></p>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">자체평가</label>
+                    <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; text-align: center;">
+                        <div style="font-size: 14px; color: #666; margin-bottom: 10px;">종합점수에 따른 등급</div>
+                        <div style="display: flex; align-items: center; justify-content: center; gap: 20px;">
+                            <div>
+                                <div style="font-size: 14px; color: #666;">총점</div>
+                                <div style="font-size: 32px; font-weight: 700; color: #667eea;" id="modalTotalScore">0</div>
+                            </div>
+                            <div style="font-size: 40px; color: #ddd;">→</div>
+                            <div>
+                                <div style="font-size: 14px; color: #666;">등급</div>
+                                <div style="font-size: 32px; font-weight: 700; color: #28a745;" id="modalSelfGrade">-</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 유형효과 검증 정보 (검증 완료된 경우에만 표시) -->
+                <div id="verificationInfoSection" style="display: none; margin-top: 20px;">
+                    <div class="form-group">
+                        <label class="form-label">💰 유형효과 검증 결과</label>
+                        <div style="background: #fff3cd; padding: 20px; border-radius: 8px; border: 2px solid #ffc107;">
+                            <div style="margin-bottom: 15px;">
+                                <div style="font-size: 12px; color: #856404; margin-bottom: 5px;">제안자 예상 금액</div>
+                                <div style="font-size: 20px; font-weight: 600; color: #856404;" id="modalOriginalAmount">-</div>
+                            </div>
+                            <div style="border-top: 1px solid #ffc107; padding-top: 15px;">
+                                <div style="font-size: 12px; color: #28a745; margin-bottom: 5px;">검증자 확정 금액</div>
+                                <div style="font-size: 24px; font-weight: 700; color: #28a745;" id="modalVerifiedAmount">-</div>
+                            </div>
+                            <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #ffc107;">
+                                <div style="font-size: 12px; color: #666; margin-bottom: 5px;">검증 의견</div>
+                                <div style="font-size: 14px; color: #333;" id="modalVerifierComment">-</div>
+                            </div>
+                            <div style="margin-top: 10px; font-size: 12px; color: #856404;">
+                                검증자: <span id="modalVerifierName">-</span> | 검증일: <span id="modalVerifiedAt">-</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 평가 입력 -->
+                <hr style="margin: 30px 0; border: none; border-top: 1px solid #e9ecef;">
+
+                <h4 style="margin-bottom: 20px; color: #333;">📝 평가 항목</h4>
+
+                <!-- 노력도 -->
+                <div class="form-group">
+                    <label class="form-label">노력도 (0~15점) *</label>
+                    <select class="form-input" id="reviewEffortScore" required onchange="calculateReviewScore()">
+                        <option value="">선택하세요</option>
+                        <option value="15">15점 - 80시간 이상의 노력</option>
+                        <option value="10">10점 - 80시간 이내의 노력</option>
+                        <option value="5">5점 - 8시간 이내의 노력</option>
+                        <option value="0">0점 - 노력 미흡</option>
+                    </select>
+                    <div style="font-size: 12px; color: #666; margin-top: 5px;">투입된 노력 시간</div>
+                </div>
+
+                <!-- 창의성 -->
+                <div class="form-group">
+                    <label class="form-label">창의성 (0~15점) *</label>
+                    <select class="form-input" id="reviewCreativityScore" required onchange="calculateReviewScore()">
+                        <option value="">선택하세요</option>
+                        <option value="15">15점 - 본부에 유사 사례의 제안이 없다</option>
+                        <option value="10">10점 - 본부내 유사 사례의 제안이 있다</option>
+                        <option value="5">5점 - 팀내 유사 사례의 제안이 있다</option>
+                        <option value="0">0점 - 창의성 없음</option>
+                    </select>
+                    <div style="font-size: 12px; color: #666; margin-top: 5px;">아이디어의 독창성</div>
+                </div>
+
+                <!-- 무형효과 - 품질 -->
+                <div class="form-group">
+                    <label class="form-label">무형효과 - 품질 (0~10점)</label>
+                    <select class="form-input" id="reviewQualityScore" onchange="calculateReviewScore()">
+                        <option value="0">0점 - 해당사항없음</option>
+                        <option value="5">5점 - 현재보다 품질수준이 올라간다</option>
+                        <option value="7">7점 - 경불량을 예방하거나 품질수준이 향상된다</option>
+                        <option value="10">10점 - 중불량을 예방하거나 품질수준이 향상된다</option>
+                    </select>
+                    <div style="font-size: 12px; color: #666; margin-top: 5px;">품질 개선, 불량 예방 효과</div>
+                </div>
+
+                <!-- 무형효과 - 안전 -->
+                <div class="form-group">
+                    <label class="form-label">무형효과 - 안전 (0~10점)</label>
+                    <select class="form-input" id="reviewSafetyScore" onchange="calculateReviewScore()">
+                        <option value="0">0점 - 해당사항없음</option>
+                        <option value="5">5점 - 현재의 상태보다 안전한 작업환경을 구축한다</option>
+                        <option value="7">7점 - 경미한 안전사고를 예방하는 효과가 있다 (공상, 도난 등)</option>
+                        <option value="10">10점 - 중대한 안전사고를 예방하는 효과가 있다 (산업재해, 화재 등)</option>
+                    </select>
+                    <div style="font-size: 12px; color: #666; margin-top: 5px;">안전 환경 개선, 사고 예방 효과</div>
+                </div>
+
+                <!-- 종합 점수 표시 -->
+                <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <strong>평가 총점:</strong>
+                        <span id="reviewTotalScore" style="font-size: 24px; font-weight: 700; color: #667eea;">0점</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px;">
+                        <strong>등급:</strong>
+                        <span id="reviewGradeDisplay" style="font-size: 20px; font-weight: 600; color: #28a745;">-</span>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">평가 의견</label>
+                    <textarea class="form-textarea" id="reviewComment" placeholder="제안서에 대한 의견을 입력하세요 (선택사항)"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeReviewModal()">취소</button>
+                <button class="btn btn-danger" onclick="rejectSuggestion()">반려</button>
+                <button class="btn btn-warning" onclick="requestRevision()">수정요청</button>
+                <button class="btn btn-success" onclick="approveSuggestion()">승인</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 상세보기 모달 -->
+    <div id="detailModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>제안서 상세보기</h3>
+                <button class="close-btn" onclick="closeDetailModal()">×</button>
+            </div>
+            <div class="modal-body" id="detailContent"></div>
+        </div>
+    </div>
+
+    <!-- Toast 알림 -->
+    <div class="toast" id="toast"></div>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-firestore-compat.js"></script>
+
+    <script>
+        // Firebase 설정
+        const firebaseConfig = {
+            apiKey: "AIzaSyAv0y8cF86kDC-saDZA6K0Q5fZd6dk9H1Y",
+            authDomain: "suggestion-system-58def.firebaseapp.com",
+            projectId: "suggestion-system-58def",
+            storageBucket: "suggestion-system-58def.firebasestorage.app",
+            messagingSenderId: "755050605021",
+            appId: "1:755050605021:web:befd52c5516c3a3d3e2e34"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+
+        // Firebase 캐싱 활성화 (읽기 횟수 대폭 감소)
+        db.enablePersistence({ synchronizeTabs: true })
+            .catch((err) => {
+                if (err.code == 'failed-precondition') {
+                    // Multiple tabs open - caching disabled
+                } else if (err.code == 'unimplemented') {
+                    // Browser doesn't support caching
+                }
+            });
+
+        // 전역 변수
+        let currentUser = null;
+        let currentLeader = null;
+        let currentSuggestion = null;
+        let allSuggestions = [];
+
+        // 인증 확인
+        auth.onAuthStateChanged(async (user) => {
+            if (!user) {
+                window.location.href = 'index.html';
+                return;
+            }
+
+            currentUser = user;
+
+            try {
+                const userDoc = await db.collection('users').doc(user.uid).get();
+                if (!userDoc.exists) {
+                    showToast('사용자 정보를 찾을 수 없습니다.', 'error');
+                    auth.signOut();
+                    return;
+                }
+
+                const userData = userDoc.data();
+
+                // roles 배열이 없으면 기본값 설정 (기존 시스템 호환)
+                if (!userData.roles || userData.roles.length === 0) {
+                    const defaultRoles = ['user'];
+                    if (userData.role === 'admin') defaultRoles.push('admin');
+                    if (userData.isEvaluator) {
+                        if (userData.leaderLevel === 1) defaultRoles.push('firstReviewer');
+                        else if (userData.leaderLevel === 2) defaultRoles.push('secondReviewer');
+                        else defaultRoles.push('firstReviewer'); // 기본값
+                    }
+                    try {
+                        await db.collection('users').doc(user.uid).update({ roles: defaultRoles });
+                        userData.roles = defaultRoles;
+                    } catch (updateError) {
+                        userData.roles = defaultRoles;
+                    }
+                }
+
+                // employees 컬렉션에서 employeeId 가져오기
+                let employeeId = userData.employeeId; // users 컬렉션에 있으면 사용
+
+                if (!employeeId) {
+                    const employeeQuery = await db.collection('employees')
+                        .where('email', '==', user.email)
+                        .where('isActive', '==', true)
+                        .get();
+
+                    if (!employeeQuery.empty) {
+                        employeeId = employeeQuery.docs[0].id;
+                    } else {
+                        console.error('Employee not found in employees collection');
+                    }
+                }
+
+                // currentLeader 객체 명시적 구성 (dashboard.html과 동일한 방식)
+                currentLeader = {
+                    uid: user.uid,
+                    email: user.email,
+                    displayName: userData.displayName,
+                    department: userData.department,
+                    employeeId: employeeId,
+                    role: userData.role,
+                    roles: userData.roles || ['user'],
+                    isEvaluator: userData.isEvaluator,
+                    leaderLevel: userData.leaderLevel
+                };
+
+                // 리더 권한 확인 (roles 배열 또는 isEvaluator 확인)
+                const hasReviewerRole = userData.roles.includes('firstReviewer') ||
+                                       userData.roles.includes('secondReviewer') ||
+                                       userData.isEvaluator === true;
+
+                if (!hasReviewerRole) {
+                    showToast('평가자 권한이 없습니다.', 'error');
+                    setTimeout(() => {
+                        window.location.href = 'dashboard.html';
+                    }, 2000);
+                    return;
+                }
+
+                // 사용자 정보 표시
+                document.getElementById('userInfo').innerHTML = `
+                    <strong>${userData.displayName}</strong><br>
+                    ${userData.department || ''}<br>
+                    ${userData.jobTitle || '리더'}
+                `;
+
+                // 데이터 로드
+                loadDashboard();
+                loadPendingSuggestions();
+                loadReviewingSuggestions();
+                loadCompletedSuggestions();
+                loadStats();
+
+            } catch (error) {
+                console.error('사용자 정보 로드 오류:', error);
+                showToast('사용자 정보를 불러오는데 실패했습니다.', 'error');
+            }
+        });
+
+        // 대시보드 로드
+        async function loadDashboard() {
+            try {
+                // 결재 대기 건수
+                const pendingSnapshot = await db.collection('suggestions')
+                    .where('currentApproverId', '==', currentLeader.employeeId)
+                    .where('status', '==', 'pending')
+                    .get();
+
+                const pendingCount = pendingSnapshot.size;
+                document.getElementById('statPending').textContent = pendingCount;
+                document.getElementById('pendingCount').textContent = pendingCount;
+
+                // 이번 주 처리 건수
+                const weekAgo = new Date();
+                weekAgo.setDate(weekAgo.getDate() - 7);
+
+                const weekSnapshot = await db.collection('suggestions')
+                    .where('level1Approval.approverId', '==', currentLeader.employeeId)
+                    .where('level1Approval.approvedAt', '>=', weekAgo)
+                    .get();
+
+                document.getElementById('statWeek').textContent = weekSnapshot.size;
+
+                // 이번 달 처리 건수
+                const monthStart = new Date();
+                monthStart.setDate(1);
+                monthStart.setHours(0, 0, 0, 0);
+
+                const monthSnapshot = await db.collection('suggestions')
+                    .where('level1Approval.approverId', '==', currentLeader.employeeId)
+                    .where('level1Approval.approvedAt', '>=', monthStart)
+                    .get();
+
+                document.getElementById('statMonth').textContent = monthSnapshot.size;
+
+                // 최근 결재 대기 제안서 (최대 5개)
+                const recentDocs = pendingSnapshot.docs.slice(0, 5);
+                displayRecentPending(recentDocs);
+
+            } catch (error) {
+                console.error('대시보드 로드 오류:', error);
+            }
+        }
+
+        // 최근 결재 대기 제안서 표시
+        function displayRecentPending(docs) {
+            const tbody = document.getElementById('recentPendingList');
+
+            if (docs.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" style="text-align: center; padding: 40px; color: #999;">
+                            결재 대기 중인 제안서가 없습니다.
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            tbody.innerHTML = docs.map(doc => {
+                const data = doc.data();
+                return `
+                    <tr>
+                        <td>${data.suggestionNumber}</td>
+                        <td>${data.proposer}</td>
+                        <td>${data.department}</td>
+                        <td>${data.title}</td>
+                        <td>${formatDate(data.createdAt)}</td>
+                        <td>
+                            <button class="btn btn-primary btn-sm recent-review-btn" data-suggestion-id="${doc.id}">
+                                평가하기
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+
+            // 이벤트 리스너 등록
+            document.querySelectorAll('.recent-review-btn').forEach(btn => {
+                btn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const suggestionId = this.getAttribute('data-suggestion-id');
+                    openReviewModal(suggestionId);
+                });
+            });
+        }
+
+        // 결재 대기 목록 로드
+        async function loadPendingSuggestions() {
+            try {
+                const snapshot = await db.collection('suggestions')
+                    .where('currentApproverId', '==', currentLeader.employeeId)
+                    .where('status', '==', 'pending')
+                    .get();
+
+                const tbody = document.getElementById('pendingList');
+
+                // 클라이언트에서 정렬
+                const myPending = snapshot.docs.sort((a, b) => {
+                    const timeA = a.data().createdAt?.toDate?.() || new Date(0);
+                    const timeB = b.data().createdAt?.toDate?.() || new Date(0);
+                    return timeB - timeA; // 최신순
+                });
+
+                if (myPending.length === 0) {
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="7" style="text-align: center; padding: 40px; color: #999;">
+                                결재 대기 중인 제안서가 없습니다.
+                            </td>
+                        </tr>
+                    `;
+                    return;
+                }
+
+                tbody.innerHTML = myPending.map(doc => {
+                    const data = doc.data();
+                    const selfScore = data.scores?.self?.total || 0;
+                    const selfGrade = data.scores?.self?.grade || '-';
+                    return `
+                        <tr>
+                            <td>${data.suggestionNumber || '-'}</td>
+                            <td>${data.proposer || '-'}</td>
+                            <td>${data.department || '-'}</td>
+                            <td><strong>${data.title || '-'}</strong></td>
+                            <td>${formatDate(data.createdAt)}</td>
+                            <td>
+                                <div style="text-align: center;">
+                                    <div style="font-size: 18px; font-weight: 600; color: #667eea;">${selfScore}</div>
+                                    <div style="font-size: 11px; color: #999;">${selfGrade}</div>
+                                </div>
+                            </td>
+                            <td>
+                                <button class="btn btn-primary btn-sm review-btn" data-suggestion-id="${doc.id}">
+                                    평가하기
+                                </button>
+                                <button class="btn btn-danger btn-sm" onclick="deleteSuggestion('${doc.id}')" style="margin-left: 5px;">
+                                    삭제
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+
+                // 이벤트 리스너 등록 (이전 리스너는 innerHTML로 이미 제거됨)
+                // DOM이 업데이트될 시간을 주기 위해 setTimeout 사용
+                setTimeout(() => {
+                    const reviewButtons = document.querySelectorAll('#pendingList .review-btn');
+
+                    if (reviewButtons.length === 0) {
+                        return;
+                    }
+
+                    reviewButtons.forEach((btn, index) => {
+                        const suggestionId = btn.getAttribute('data-suggestion-id');
+
+                        // 클릭 핸들러 정의
+                        const clickHandler = function(e) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            const id = this.getAttribute('data-suggestion-id');
+
+                            if (typeof window.openReviewModal === 'function') {
+                                try {
+                                    window.openReviewModal(id);
+                                } catch (err) {
+                                    console.error('openReviewModal call error:', err);
+                                }
+                            } else {
+                                console.error('openReviewModal function not found on window object');
+                            }
+                        };
+
+                        btn.addEventListener('click', clickHandler);
+                    });
+                }, 100);
+
+            } catch (error) {
+                console.error('결재 대기 목록 로드 오류:', error);
+                showToast('목록을 불러오는데 실패했습니다.', 'error');
+            }
+        }
+
+        // 제안서 삭제 (관리자용)
+        async function deleteSuggestion(suggestionId) {
+            try {
+                const docRef = db.collection('suggestions').doc(suggestionId);
+                const doc = await docRef.get();
+
+                if (!doc.exists) {
+                    showToast('제안서를 찾을 수 없습니다.', 'error');
+                    return;
+                }
+
+                const data = doc.data();
+
+                if (!confirm(`"${data.title}" 제안서를 삭제하시겠습니까?\n삭제된 제안서는 복구할 수 없습니다.`)) {
+                    return;
+                }
+
+                // Firestore에서 삭제
+                await docRef.delete();
+
+                showToast('제안서가 삭제되었습니다.', 'success');
+
+                // 목록 새로고침
+                await loadPendingSuggestions();
+                await loadStats();
+
+            } catch (error) {
+                console.error('제안서 삭제 오류:', error);
+                showToast('제안서 삭제 중 오류가 발생했습니다: ' + error.message, 'error');
+            }
+        }
+
+        // 검토 중 목록 로드
+        async function loadReviewingSuggestions() {
+            try {
+                const snapshot = await db.collection('suggestions')
+                    .where('approvalStatus', 'in', ['level1', 'level2'])
+                    .get();
+
+                const tbody = document.getElementById('reviewingList');
+
+                // 내가 이미 승인한 제안서만 필터링
+                let myReviewing = snapshot.docs.filter(doc => {
+                    const data = doc.data();
+                    return (data.level1Approval && data.level1Approval.approverId === currentLeader.employeeId) ||
+                           (data.level2Approval && data.level2Approval.approverId === currentLeader.employeeId);
+                });
+
+                // 클라이언트에서 정렬
+                myReviewing = myReviewing.sort((a, b) => {
+                    const timeA = a.data().createdAt?.toDate?.() || new Date(0);
+                    const timeB = b.data().createdAt?.toDate?.() || new Date(0);
+                    return timeB - timeA; // 최신순
+                });
+
+                if (myReviewing.length === 0) {
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="6" style="text-align: center; padding: 40px; color: #999;">
+                                검토 중인 제안서가 없습니다.
+                            </td>
+                        </tr>
+                    `;
+                    document.getElementById('reviewingCount').textContent = '0';
+                    return;
+                }
+
+                document.getElementById('reviewingCount').textContent = myReviewing.length;
+
+                tbody.innerHTML = myReviewing.map(doc => {
+                    const data = doc.data();
+                    const myApproval = data.level1Approval?.approverId === currentLeader.employeeId 
+                        ? data.level1Approval 
+                        : data.level2Approval;
+
+                    return `
+                        <tr>
+                            <td>${data.suggestionNumber}</td>
+                            <td>${data.proposer}</td>
+                            <td>${data.title}</td>
+                            <td>
+                                <span class="badge badge-success">승인</span>
+                                <div style="font-size: 12px; color: #666; margin-top: 5px;">점수: ${myApproval.score}점</div>
+                            </td>
+                            <td>
+                                <span class="badge badge-warning">
+                                    ${data.approvalStatus === 'level1' ? '2차 결재 대기' : '최종 결재 대기'}
+                                </span>
+                            </td>
+                            <td>
+                                <button class="btn btn-secondary btn-sm" onclick="viewSuggestion('${doc.id}')">
+                                    상세보기
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+
+            } catch (error) {
+                console.error('검토 중 목록 로드 오류:', error);
+            }
+        }
+
+        // 처리 완료 목록 로드
+        async function loadCompletedSuggestions() {
+            try {
+                const snapshot = await db.collection('suggestions')
+                    .where('approvalStatus', 'in', ['approved', 'rejected'])
+                    .get();
+
+                const tbody = document.getElementById('completedList');
+
+                // 내가 처리한 제안서만 필터링
+                let myCompleted = snapshot.docs.filter(doc => {
+                    const data = doc.data();
+                    return (data.level1Approval && data.level1Approval.approverId === currentLeader.employeeId) ||
+                           (data.level2Approval && data.level2Approval.approverId === currentLeader.employeeId) ||
+                           (data.finalApproval && data.finalApproval.approverId === currentLeader.employeeId);
+                });
+
+                // 클라이언트에서 정렬 및 제한
+                myCompleted = myCompleted.sort((a, b) => {
+                    const timeA = a.data().updatedAt?.toDate?.() || new Date(0);
+                    const timeB = b.data().updatedAt?.toDate?.() || new Date(0);
+                    return timeB - timeA; // 최신순
+                }).slice(0, 50);
+
+                if (myCompleted.length === 0) {
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="7" style="text-align: center; padding: 40px; color: #999;">
+                                처리 완료된 제안서가 없습니다.
+                            </td>
+                        </tr>
+                    `;
+                    return;
+                }
+
+                tbody.innerHTML = myCompleted.map(doc => {
+                    const data = doc.data();
+                    const myApproval = data.level1Approval?.approverId === currentLeader.employeeId 
+                        ? data.level1Approval 
+                        : (data.level2Approval?.approverId === currentLeader.employeeId 
+                            ? data.level2Approval 
+                            : data.finalApproval);
+
+                    return `
+                        <tr>
+                            <td>${data.suggestionNumber}</td>
+                            <td>${data.proposer}</td>
+                            <td>${data.title}</td>
+                            <td>
+                                <span class="badge ${myApproval.status === 'approved' ? 'badge-success' : 'badge-danger'}">
+                                    ${myApproval.status === 'approved' ? '승인' : '반려'}
+                                </span>
+                                <div style="font-size: 12px; color: #666; margin-top: 5px;">점수: ${myApproval.score}점</div>
+                            </td>
+                            <td>
+                                <span class="badge ${data.approvalStatus === 'approved' ? 'badge-success' : 'badge-danger'}">
+                                    ${data.approvalStatus === 'approved' ? '최종 승인' : '반려'}
+                                </span>
+                            </td>
+                            <td>${formatDate(myApproval.approvedAt)}</td>
+                            <td>
+                                <button class="btn btn-secondary btn-sm" onclick="viewSuggestion('${doc.id}')">
+                                    상세보기
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+
+            } catch (error) {
+                console.error('처리 완료 목록 로드 오류:', error);
+            }
+        }
+
+        // 전체 제안 로드
+        async function loadAllSuggestions() {
+            try {
+                // 모든 사용자의 제안 조회 (orderBy 제거하여 권한 문제 해결)
+                const snapshot = await db.collection('suggestions')
+                    .limit(1000)
+                    .get();
+
+                const tbody = document.getElementById('allSuggestionsList');
+
+                if (snapshot.empty) {
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="7" style="text-align: center; padding: 40px; color: #999;">
+                                제안서가 없습니다.
+                            </td>
+                        </tr>
+                    `;
+                    return;
+                }
+
+                // 클라이언트에서 정렬 (최신순)
+                const sortedDocs = snapshot.docs.sort((a, b) => {
+                    const timeA = a.data().createdAt?.toDate?.() || new Date(0);
+                    const timeB = b.data().createdAt?.toDate?.() || new Date(0);
+                    return timeB - timeA;
+                });
+
+                tbody.innerHTML = sortedDocs.map(doc => {
+                    const data = doc.data();
+                    const statusText = {
+                        'draft': '임시저장',
+                        'pending': '결재대기',
+                        'reviewing': '검토중',
+                        'approved': '승인',
+                        'rejected': '반려'
+                    }[data.status] || data.status;
+
+                    const statusClass = {
+                        'draft': 'badge-secondary',
+                        'pending': 'badge-warning',
+                        'reviewing': 'badge-info',
+                        'approved': 'badge-success',
+                        'rejected': 'badge-danger'
+                    }[data.status] || 'badge-secondary';
+
+                    return `
+                        <tr>
+                            <td>${data.suggestionNumber || '-'}</td>
+                            <td>${data.proposer || '-'}</td>
+                            <td>${data.department || '-'}</td>
+                            <td>${data.title || '-'}</td>
+                            <td>
+                                <span class="badge ${statusClass}">
+                                    ${statusText}
+                                </span>
+                            </td>
+                            <td>${formatDate(data.createdAt)}</td>
+                            <td>
+                                <button class="btn btn-secondary btn-sm" onclick="viewSuggestion('${doc.id}')">
+                                    상세보기
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+
+            } catch (error) {
+                console.error('전체 제안 목록 로드 오류:', error);
+                const tbody = document.getElementById('allSuggestionsList');
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="7" style="text-align: center; padding: 40px; color: #dc3545;">
+                            전체 제안을 불러오는데 실패했습니다: ${error.message}
+                        </td>
+                    </tr>
+                `;
+            }
+        }
+
+        // 통계 로드
+        async function loadStats() {
+            try {
+                const snapshot = await db.collection('suggestions').get();
+
+                // 내가 처리한 제안서 필터링
+                const myProcessed = snapshot.docs.filter(doc => {
+                    const data = doc.data();
+                    return (data.level1Approval && data.level1Approval.approverId === currentLeader.employeeId) ||
+                           (data.level2Approval && data.level2Approval.approverId === currentLeader.employeeId) ||
+                           (data.finalApproval && data.finalApproval.approverId === currentLeader.employeeId);
+                });
+
+                const total = myProcessed.length;
+                const approved = myProcessed.filter(doc => {
+                    const data = doc.data();
+                    const myApproval = data.level1Approval?.approverId === currentLeader.employeeId 
+                        ? data.level1Approval 
+                        : (data.level2Approval?.approverId === currentLeader.employeeId 
+                            ? data.level2Approval 
+                            : data.finalApproval);
+                    return myApproval && myApproval.status === 'approved';
+                }).length;
+
+                const rejected = myProcessed.filter(doc => {
+                    const data = doc.data();
+                    const myApproval = data.level1Approval?.approverId === currentLeader.employeeId 
+                        ? data.level1Approval 
+                        : (data.level2Approval?.approverId === currentLeader.employeeId 
+                            ? data.level2Approval 
+                            : data.finalApproval);
+                    return myApproval && myApproval.status === 'rejected';
+                }).length;
+
+                const approvalRate = total > 0 ? Math.round((approved / total) * 100) : 0;
+
+                document.getElementById('statsTotal').textContent = total;
+                document.getElementById('statsApproved').textContent = approved;
+                document.getElementById('statsRejected').textContent = rejected;
+                document.getElementById('statsApprovalRate').textContent = approvalRate + '%';
+
+            } catch (error) {
+                console.error('통계 로드 오류:', error);
+            }
+        }
+
+        // 모든 데이터 다시 로드
+        function loadAllData() {
+            loadDashboard();
+            loadPendingSuggestions();
+            loadReviewingSuggestions();
+            loadCompletedSuggestions();
+            loadStats();
+        }
+
+        // 평가 모달 열기
+        async function openReviewModal(suggestionId) {
+            try {
+                if (!db) {
+                    showToast('시스템 오류가 발생했습니다.', 'error');
+                    return;
+                }
+
+                const doc = await db.collection('suggestions').doc(suggestionId).get();
+
+                if (!doc.exists) {
+                    showToast('제안서를 찾을 수 없습니다.', 'error');
+                    return;
+                }
+
+                const data = doc.data();
+                currentSuggestion = { id: suggestionId, ...data };
+
+                // 모달에 데이터 채우기
+                try {
+                    document.getElementById('modalSugNumber').textContent = data.suggestionNumber || '-';
+                    document.getElementById('modalProposer').textContent = `${data.proposer || '-'} (${data.department || '-'})`;
+                    document.getElementById('modalDepartment').textContent = data.department || '-';
+                    document.getElementById('modalSubmitDate').textContent = formatDate(data.createdAt);
+                    document.getElementById('modalTitle').textContent = data.title || '-';
+                    document.getElementById('modalCurrentSituation').textContent = data.currentSituation || '-';
+                    document.getElementById('modalImprovementPlan').textContent = data.improvementPlan || '-';
+                    document.getElementById('modalTotalScore').textContent = data.scores?.self?.total || 0;
+                    document.getElementById('modalSelfGrade').textContent = data.scores?.self?.grade || '-';
+
+                    // 유형효과 검증 정보 표시
+                    const verificationSection = document.getElementById('verificationInfoSection');
+                    if (data.hasTypicalEffect && data.effectVerification && data.effectVerification.status === 'verified') {
+                        // 검증이 완료된 경우 검증 정보 표시
+                        verificationSection.style.display = 'block';
+
+                        document.getElementById('modalOriginalAmount').textContent =
+                            (data.effectVerification.originalAmount || 0).toLocaleString() + '원/년';
+                        document.getElementById('modalVerifiedAmount').textContent =
+                            (data.effectVerification.verifiedAmount || 0).toLocaleString() + '원/년';
+                        document.getElementById('modalVerifierComment').textContent =
+                            data.effectVerification.verifierComment || '-';
+                        document.getElementById('modalVerifierName').textContent =
+                            data.effectVerification.verifierName || '-';
+
+                        const verifiedAt = data.effectVerification.verifiedAt?.toDate?.();
+                        document.getElementById('modalVerifiedAt').textContent =
+                            verifiedAt ? verifiedAt.toLocaleDateString('ko-KR') : '-';
+                    } else {
+                        // 유형효과가 없거나 검증이 완료되지 않은 경우 숨김
+                        verificationSection.style.display = 'none';
+                    }
+                } catch (elemError) {
+                    console.error('Modal element update error:', elemError);
+                }
+
+                // 입력 필드 초기화
+                const reviewEffort = document.getElementById('reviewEffortScore');
+                const reviewCreativity = document.getElementById('reviewCreativityScore');
+                const reviewQuality = document.getElementById('reviewQualityScore');
+                const reviewSafety = document.getElementById('reviewSafetyScore');
+                const reviewComment = document.getElementById('reviewComment');
+                const reviewTotalScore = document.getElementById('reviewTotalScore');
+                const reviewGradeDisplay = document.getElementById('reviewGradeDisplay');
+
+                if (reviewEffort) reviewEffort.value = '';
+                if (reviewCreativity) reviewCreativity.value = '';
+                if (reviewQuality) reviewQuality.value = '0';
+                if (reviewSafety) reviewSafety.value = '0';
+                if (reviewComment) reviewComment.value = '';
+                if (reviewTotalScore) reviewTotalScore.textContent = '0점';
+                if (reviewGradeDisplay) reviewGradeDisplay.textContent = '-';
+
+                // 모달 표시
+                const modal = document.getElementById('reviewModal');
+                if (modal) {
+                    modal.classList.add('show');
+                } else {
+                    console.error('reviewModal element not found');
+                }
+
+            } catch (error) {
+                console.error('❌ 모달 열기 오류:', error);
+                showToast('제안서를 불러오는데 실패했습니다: ' + error.message, 'error');
+            }
+        }
+
+        // 평가 점수 계산
+        function calculateReviewScore() {
+            const effort = parseInt(document.getElementById('reviewEffortScore').value) || 0;
+            const creativity = parseInt(document.getElementById('reviewCreativityScore').value) || 0;
+            const quality = parseInt(document.getElementById('reviewQualityScore').value) || 0;
+            const safety = parseInt(document.getElementById('reviewSafetyScore').value) || 0;
+
+            // 품질과 안전 중 더 높은 점수 사용 (OR 조건)
+            const intangibleEffect = Math.max(quality, safety);
+
+            const total = effort + creativity + intangibleEffect;
+
+            document.getElementById('reviewTotalScore').textContent = total + '점';
+
+            // 등급 계산
+            const grade = calculateGrade(total);
+            document.getElementById('reviewGradeDisplay').textContent = grade || '-';
+        }
+
+        // 등급 계산 함수
+        function calculateGrade(score) {
+            const gradeRanges = [
+                { grade: '특급', min: 91, max: 100 },
+                { grade: '1급', min: 81, max: 90 },
+                { grade: '2급', min: 71, max: 80 },
+                { grade: '3급', min: 61, max: 70 },
+                { grade: '4급', min: 56, max: 60 },
+                { grade: '5급', min: 51, max: 55 },
+                { grade: '6급', min: 45, max: 50 },
+                { grade: '7급', min: 41, max: 44 },
+                { grade: '8급', min: 31, max: 40 },
+                { grade: '9급', min: 21, max: 30 },
+                { grade: '10급', min: 0, max: 20 }
+            ];
+
+            for (let range of gradeRanges) {
+                if (score >= range.min && score <= range.max) {
+                    return range.grade;
+                }
+            }
+            return null;
+        }
+
+        // 평가 모달 닫기
+        function closeReviewModal() {
+            document.getElementById('reviewModal').classList.remove('show');
+            currentSuggestion = null;
+        }
+
+        // 승인 처리
+        async function approveSuggestion() {
+            const effort = parseInt(document.getElementById('reviewEffortScore').value);
+            const creativity = parseInt(document.getElementById('reviewCreativityScore').value);
+            const quality = parseInt(document.getElementById('reviewQualityScore').value) || 0;
+            const safety = parseInt(document.getElementById('reviewSafetyScore').value) || 0;
+            const comment = document.getElementById('reviewComment').value;
+
+            if (!effort || !creativity) {
+                showToast('노력도와 창의성은 필수 항목입니다.', 'error');
+                return;
+            }
+
+            const intangibleEffect = Math.max(quality, safety);
+            const totalScore = effort + creativity + intangibleEffect;
+            const grade = calculateGrade(totalScore);
+
+            if (!confirm('이 제안서를 승인하시겠습니까?')) return;
+
+            try {
+                const suggestionRef = db.collection('suggestions').doc(currentSuggestion.id);
+                const suggestionData = currentSuggestion;
+
+                // Get the approval line to find the next approver
+                const approvalLineDoc = await db.collection('approvalLines').doc(suggestionData.approvalLineId).get();
+                if (!approvalLineDoc.exists) {
+                    throw new Error('결재 라인 정보를 찾을 수 없습니다.');
+                }
+                const approvalLineData = approvalLineDoc.data();
+                const approvers = approvalLineData.approvers || []; // Firestore에서 approvers 배열을 직접 사용
+
+                // 결재선 무결성 검증
+                if (approvers.length === 0) {
+                    throw new Error('결재선에 평가자가 설정되어 있지 않습니다.');
+                }
+
+                const currentStage = suggestionData.stage || 1;
+                const nextApprover = approvers.find(a => a.level === currentStage + 1);
+
+                const newHistoryEntry = {
+                    approverId: currentLeader.employeeId,
+                    approverName: currentLeader.displayName,
+                    status: 'approved',
+                    level: currentStage,
+                    approvedAt: new Date(),
+                    scores: {
+                        effort: effort,
+                        creativity: creativity,
+                        quality: quality,
+                        safety: safety,
+                        intangibleEffect: intangibleEffect,
+                        total: totalScore,
+                        grade: grade
+                    },
+                    comment: comment
+                };
+
+                const stageKey = `stage${currentStage}`;
+                const updateData = {
+                    approvalHistory: firebase.firestore.FieldValue.arrayUnion(newHistoryEntry),
+                    [`scores.${stageKey}`]: {
+                        effort: effort,
+                        creativity: creativity,
+                        quality: quality,
+                        safety: safety,
+                        intangibleEffect: intangibleEffect,
+                        total: totalScore,
+                        grade: grade,
+                        comment: comment,
+                        evaluatorId: currentLeader.employeeId,
+                        evaluatorName: currentLeader.displayName,
+                        evaluatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                    },
+                    totalScore: totalScore,
+                    grade: grade,
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                };
+
+                // 소위원회(1단계) 평가인 경우, 60점 기준으로 흐름 결정
+                if (currentStage === 1) {
+                    if (totalScore <= 60) {
+                        // 60점 이하: 평가 종료 (제안위원회로 넘어가지 않음)
+                        updateData.currentApproverId = null;
+                        updateData.status = 'approved';
+                        showToast('소위원회 평가 완료! (60점 이하로 평가 종료)', 'success');
+                    } else if (nextApprover && nextApprover.id) {
+                        // 60점 초과: 제안위원회로 전달
+                        updateData.currentApproverId = nextApprover.id;
+                        updateData.stage = currentStage + 1;
+                        showToast('소위원회 승인 완료! (60점 초과로 제안위원회 평가 진행)', 'success');
+                    } else {
+                        // 제안위원회 설정이 없는 경우에도 종료
+                        updateData.currentApproverId = null;
+                        updateData.status = 'approved';
+                        showToast('소위원회 평가 완료! (다음 평가자 없음)', 'success');
+                    }
+                } else if (nextApprover && nextApprover.id) {
+                    // 제안위원회(2단계) 이상: 다음 단계로 이동
+                    updateData.currentApproverId = nextApprover.id;
+                    updateData.stage = currentStage + 1;
+                    showToast('승인 완료! 다음 결재자에게 전달되었습니다.', 'success');
+                } else {
+                    // 최종 승인 (더 이상의 승인자 없음)
+                    updateData.currentApproverId = null;
+                    updateData.status = 'approved';
+                    showToast('최종 승인 처리되었습니다!', 'success');
+                }
+
+                await suggestionRef.update(updateData);
+
+                // 알림 생성
+                await db.collection('notifications').add({
+                    userId: suggestionData.userId,
+                    title: '제안서 승인',
+                    message: `${currentLeader.displayName}님이 제안서를 승인했습니다.`,
+                    type: 'evaluation',
+                    read: false,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+
+                closeReviewModal();
+                loadAllData(); // Reload all data to reflect changes
+
+            } catch (error) {
+                console.error('승인 처리 오류:', error);
+                showToast('처리 중 오류가 발생했습니다: ' + error.message, 'error');
+            }
+        }
+
+        // 반려 처리
+        async function rejectSuggestion() {
+            const comment = document.getElementById('reviewComment').value;
+
+            if (!comment) {
+                showToast('반려 사유를 반드시 입력해주세요.', 'error');
+                return;
+            }
+
+            if (!confirm('이 제안서를 반려하시겠습니까?')) return;
+
+            try {
+                const suggestionRef = db.collection('suggestions').doc(currentSuggestion.id);
+                const suggestionData = currentSuggestion;
+
+                const newHistoryEntry = {
+                    approverId: currentLeader.employeeId,
+                    approverName: currentLeader.displayName,
+                    status: 'rejected',
+                    level: suggestionData.stage || 1,
+                    score: 0,  // 반려 시 점수는 0
+                    comment: comment,
+                    approvedAt: new Date()
+                };
+
+                await suggestionRef.update({
+                    status: 'rejected',
+                    currentApproverId: null,
+                    approvalHistory: firebase.firestore.FieldValue.arrayUnion(newHistoryEntry),
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+
+                // 알림 생성
+                await db.collection('notifications').add({
+                    userId: suggestionData.userId,
+                    title: '제안서 반려',
+                    message: `${currentLeader.displayName}님이 제안서를 반려했습니다. 사유: ${comment}`,
+                    type: 'evaluation',
+                    read: false,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+
+                showToast('제안서를 반려했습니다.', 'success');
+                closeReviewModal();
+                loadAllData();
+
+            } catch (error) {
+                console.error('반려 처리 오류:', error);
+                showToast('처리 중 오류가 발생했습니다.', 'error');
+            }
+        }
+
+        // 수정 요청
+        async function requestRevision() {
+            const comment = document.getElementById('reviewComment').value;
+
+            if (!comment) {
+                showToast('수정 요청 사항을 입력해주세요.', 'error');
+                return;
+            }
+
+            if (!confirm('수정을 요청하시겠습니까?')) return;
+
+            try {
+                const suggestionRef = db.collection('suggestions').doc(currentSuggestion.id);
+                const suggestionData = currentSuggestion;
+
+                const newHistoryEntry = {
+                    approverId: currentLeader.employeeId,
+                    approverName: currentLeader.displayName,
+                    status: 'revision_requested',
+                    level: suggestionData.stage || 1,
+                    comment: comment,
+                    approvedAt: new Date()
+                };
+
+                await suggestionRef.update({
+                    status: 'revision_requested',
+                    currentApproverId: suggestionData.userId, // Re-assign to the original proposer
+                    approvalHistory: firebase.firestore.FieldValue.arrayUnion(newHistoryEntry),
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+
+                // 알림 생성
+                await db.collection('notifications').add({
+                    userId: suggestionData.userId,
+                    title: '제안서 수정 요청',
+                    message: `${currentLeader.displayName}님이 수정을 요청했습니다. 수정 사항: ${comment}`,
+                    type: 'evaluation',
+                    read: false,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+
+                showToast('수정을 요청했습니다.', 'success');
+                closeReviewModal();
+                loadAllData();
+
+            } catch (error) {
+                console.error('수정 요청 오류:', error);
+                showToast('처리 중 오류가 발생했습니다.', 'error');
+            }
+        }
+
+        // 제안서 상세보기 (읽기 전용)
+        async function viewSuggestion(suggestionId) {
+            try {
+                // Firestore에서 제안서 조회
+                const doc = await db.collection('suggestions').doc(suggestionId).get();
+
+                if (!doc.exists) {
+                    showToast('제안서를 찾을 수 없습니다.', 'error');
+                    return;
+                }
+
+                const s = { id: doc.id, ...doc.data() };
+
+                const detailHtml = `
+                    <div style="padding: 20px;">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+                            <div>
+                                <strong>제안번호:</strong> ${s.suggestionNumber || s.id.substring(0, 8)}<br>
+                                <strong>제안자:</strong> ${s.proposer}<br>
+                                <strong>제안부서:</strong> ${s.department}<br>
+                                <strong>접수일:</strong> ${formatDate(s.createdAt)}
+                            </div>
+                            <div>
+                                <strong>카테고리:</strong> ${s.category || '-'}<br>
+                                <strong>우선순위:</strong> ${s.priority || '-'}<br>
+                                <strong>실시자:</strong> ${s.implementor || '-'}<br>
+                                <strong>실시부서:</strong> ${s.implementDept || '-'}
+                            </div>
+                        </div>
+
+                        <div style="margin-bottom: 20px;">
+                            <h4 style="margin-bottom: 10px;">제안 내용</h4>
+                            <div style="background: #f8f9fa; padding: 15px; border-radius: 8px;">${s.title}</div>
+                        </div>
+
+                        <div style="margin-bottom: 20px;">
+                            <h4 style="margin-bottom: 10px;">기존실시내용</h4>
+                            <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; white-space: pre-wrap;">${s.currentSituation}</div>
+                        </div>
+
+                        <div style="margin-bottom: 20px;">
+                            <h4 style="margin-bottom: 10px;">변경(신규)내용</h4>
+                            <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; white-space: pre-wrap;">${s.improvementPlan}</div>
+                        </div>
+
+                        <div style="margin-bottom: 20px;">
+                            <h4 style="margin-bottom: 10px;">자체평가</h4>
+                            <div style="background: #f8f9fa; padding: 15px; border-radius: 8px;">
+                                <div><strong>노력도:</strong> ${s.scores?.self?.effort || 0}점</div>
+                                <div><strong>창의성:</strong> ${s.scores?.self?.creativity || 0}점</div>
+                                <div><strong>유무형효과:</strong> ${s.scores?.self?.effect || 0}점</div>
+                                <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #dee2e6;">
+                                    <strong>총점:</strong> ${s.scores?.self?.total || 0}점
+                                    <strong style="margin-left: 20px;">등급:</strong> ${s.scores?.self?.grade || '-'}
+                                </div>
+                            </div>
+                        </div>
+
+                        ${s.contributors && s.contributors.length > 0 ? `
+                            <div style="margin-bottom: 20px;">
+                                <h4 style="margin-bottom: 10px;">참여자 기여도</h4>
+                                <table class="table">
+                                    <thead>
+                                        <tr>
+                                            <th>이름</th>
+                                            <th>역할</th>
+                                            <th>기여도</th>
+                                            <th>부서</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${s.contributors.map(c => `
+                                            <tr>
+                                                <td>${c.name}</td>
+                                                <td>${c.role}</td>
+                                                <td>${c.pct}%</td>
+                                                <td>${c.department}</td>
+                                            </tr>
+                                        `).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+
+                document.getElementById('detailContent').innerHTML = detailHtml;
+                document.getElementById('detailModal').classList.add('show');
+
+            } catch (error) {
+                console.error('상세보기 오류:', error);
+                showToast('제안서를 불러오는데 실패했습니다.', 'error');
+            }
+        }
+
+        // 상세보기 모달 닫기
+        function closeDetailModal() {
+            document.getElementById('detailModal').classList.remove('show');
+        }
+
+        // 유틸리티 함수
+        function formatDate(timestamp) {
+            if (!timestamp) return '-';
+            const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+            return date.toLocaleDateString('ko-KR');
+        }
+
+        function showSection(sectionId) {
+            // 모든 섹션 숨기기
+            document.querySelectorAll('.content-section').forEach(section => {
+                section.classList.remove('active');
+            });
+
+            // 선택된 섹션 표시
+            document.getElementById(sectionId).classList.add('active');
+
+            // 메뉴 활성화
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            event.target.classList.add('active');
+
+            // 섹션별 데이터 로드
+            if (sectionId === 'allSuggestions') {
+                loadAllSuggestions();
+            }
+
+            // 모바일에서 사이드바 닫기
+            if (window.innerWidth <= 768) {
+                toggleSidebar();
+            }
+        }
+
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            
+            sidebar.classList.toggle('open');
+            overlay.classList.toggle('show');
+        }
+
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = `toast ${type} show`;
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+
+        function logout() {
+            if (confirm('로그아웃 하시겠습니까?')) {
+                auth.signOut().then(() => {
+                    window.location.href = 'index.html';
+                }).catch(error => {
+                    console.error('로그아웃 오류:', error);
+                    showToast('로그아웃 중 오류가 발생했습니다.', 'error');
+                });
+            }
+        }
+
+        // 전역 함수 등록 (onclick 이벤트에서 접근 가능하도록)
+        window.openReviewModal = openReviewModal;
+        window.closeReviewModal = closeReviewModal;
+        window.calculateReviewScore = calculateReviewScore;
+        window.approveSuggestion = approveSuggestion;
+        window.rejectSuggestion = rejectSuggestion;
+        window.requestRevision = requestRevision;
+        window.showSection = showSection;
+        window.viewSuggestion = viewSuggestion;
+        window.closeDetailModal = closeDetailModal;
+        window.logout = logout;
+    </script>
+</body>
+</html>

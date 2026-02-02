@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin 계정 추가</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #0ea5e9;
+            margin-bottom: 20px;
+        }
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            width: 100%;
+            margin-top: 20px;
+        }
+        button:hover {
+            background: #5568d3;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .message {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 6px;
+            display: none;
+        }
+        .message.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .message.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .message.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        .info-box {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>새 Admin 계정 추가</h1>
+
+        <div class="info-box">
+            <strong>⚠️ 이 페이지는 한 번만 실행하면 됩니다</strong><br>
+            ADMIN 계정을 Firestore employees 컬렉션에 추가합니다<br><br>
+
+            <strong>추가될 정보:</strong><br>
+            - 사번: ADMIN<br>
+            - 이름: 관리자<br>
+            - 부서: 경영지원본부<br>
+            - 직급: 본부장<br>
+            - 직책: 시스템관리자<br>
+            - 재직상태: 활성<br>
+            - 초기 비밀번호: ajupharm
+        </div>
+
+        <button id="addAdminBtn" onclick="addAdminAccount()">Admin 계정 추가</button>
+
+        <div id="message" class="message"></div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+
+    <script>
+        // Firebase 설정
+        const firebaseConfig = {
+            apiKey: "AIzaSyAv0y8cF86kDC-saDZA6K0Q5fZd6dk9H1Y",
+            authDomain: "suggestion-system-58def.firebaseapp.com",
+            projectId: "suggestion-system-58def",
+            storageBucket: "suggestion-system-58def.firebasestorage.app",
+            messagingSenderId: "755050605021",
+            appId: "1:755050605021:web:befd52c5516c3a3d3e2e34"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        // Firebase 캐싱 활성화 (읽기 횟수 대폭 감소)
+        db.enablePersistence({ synchronizeTabs: true })
+            .catch((err) => {
+                if (err.code == 'failed-precondition') {
+                    console.warn('⚠️ 여러 탭이 열려있어 캐싱을 활성화할 수 없습니다.');
+                } else if (err.code == 'unimplemented') {
+                    console.warn('⚠️ 브라우저가 캐싱을 지원하지 않습니다.');
+                }
+            });
+
+        async function addAdminAccount() {
+            const btn = document.getElementById('addAdminBtn');
+            const messageDiv = document.getElementById('message');
+
+            btn.disabled = true;
+            btn.textContent = '처리 중...';
+
+            try {
+                // employees 컬렉션에 ADMIN 문서가 이미 있는지 확인
+                const adminDoc = await db.collection('employees').doc('ADMIN').get();
+
+                if (adminDoc.exists) {
+                    showMessage('이미 ADMIN 계정이 존재합니다', 'info');
+                    btn.disabled = false;
+                    btn.textContent = 'Admin 계정 추가';
+                    return;
+                }
+
+                // ADMIN 계정 추가
+                await db.collection('employees').doc('ADMIN').set({
+                    name: '관리자',
+                    department: '경영지원본부',
+                    position: '본부장',
+                    jobTitle: '시스템관리자',
+                    isActive: true,
+                    isLeader: false,
+                    leaderLevel: null,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+
+                showMessage('✅ ADMIN 계정이 성공적으로 추가되었습니다\n\n이제 로그인 페이지에서 다음 정보로 로그인할 수 있습니다:\n- 사번: ADMIN\n- 비밀번호: ajupharm\n\n첫 로그인 후 비밀번호를 변경해야 합니다', 'success');
+
+                btn.textContent = '완료!';
+
+            } catch (error) {
+                console.error('오류:', error);
+                showMessage('❌ 오류가 발생했습니다: ' + error.message, 'error');
+                btn.disabled = false;
+                btn.textContent = 'Admin 계정 추가';
+            }
+        }
+
+        function showMessage(text, type) {
+            const messageDiv = document.getElementById('message');
+            messageDiv.textContent = text;
+            messageDiv.className = `message ${type}`;
+            messageDiv.style.display = 'block';
+        }
+    </script>
+</body>
+</html>

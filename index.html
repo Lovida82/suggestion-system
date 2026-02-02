@@ -1,0 +1,913 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>아주약품 제안제도 시스템</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans KR', sans-serif;
+            background: linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        body::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background:
+                radial-gradient(circle at 20% 50%, rgba(45, 212, 191, 0.15) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(59, 130, 246, 0.15) 0%, transparent 50%);
+            pointer-events: none;
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 24px;
+            box-shadow:
+                0 20px 60px rgba(0, 0, 0, 0.4),
+                0 0 0 1px rgba(255, 255, 255, 0.1) inset;
+            overflow: hidden;
+            max-width: 1100px;
+            width: 100%;
+            display: flex;
+            position: relative;
+            z-index: 1;
+        }
+
+        .left-panel {
+            background: linear-gradient(135deg, #0ea5e9 0%, #2dd4bf 100%);
+            color: white;
+            padding: 60px 50px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .left-panel::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+            animation: float 15s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translate(0, 0) rotate(0deg); }
+            50% { transform: translate(-30px, -30px) rotate(180deg); }
+        }
+
+        .left-panel h1 {
+            font-size: 36px;
+            margin-bottom: 20px;
+            font-weight: 700;
+            position: relative;
+            z-index: 1;
+            letter-spacing: -0.02em;
+            line-height: 1.2;
+        }
+
+        .left-panel p {
+            font-size: 17px;
+            line-height: 1.7;
+            opacity: 0.95;
+            position: relative;
+            z-index: 1;
+        }
+
+        .features {
+            margin-top: 50px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .feature-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .feature-icon {
+            width: 48px;
+            height: 48px;
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 16px;
+            font-size: 22px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .feature-item:hover .feature-icon {
+            background: rgba(255, 255, 255, 0.25);
+            transform: translateY(-2px);
+        }
+
+        .right-panel {
+            flex: 1;
+            padding: 60px 40px;
+        }
+
+        .form-container {
+            max-width: 400px;
+            margin: 0 auto;
+        }
+
+        .tabs {
+            display: flex;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #e9ecef;
+        }
+
+        .tab {
+            flex: 1;
+            padding: 16px;
+            text-align: center;
+            cursor: pointer;
+            color: #64748b;
+            font-weight: 600;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border-bottom: 3px solid transparent;
+            margin-bottom: -2px;
+            font-size: 15px;
+        }
+
+        .tab:hover {
+            color: #0ea5e9;
+            background: rgba(14, 165, 233, 0.05);
+        }
+
+        .tab.active {
+            color: #0ea5e9;
+            border-bottom-color: #0ea5e9;
+            background: rgba(14, 165, 233, 0.05);
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 13px 16px;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            font-size: 15px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            background: #f8fafc;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: #0ea5e9;
+            box-shadow: 0 0 0 4px rgba(14, 165, 233, 0.1);
+            background: white;
+        }
+
+        .form-control:hover {
+            border-color: #cbd5e1;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            margin-top: 10px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.2);
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+        }
+
+        .btn:hover::before {
+            width: 300px;
+            height: 300px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #0ea5e9 0%, #2dd4bf 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(14, 165, 233, 0.3);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(14, 165, 233, 0.4);
+        }
+
+        .btn-primary:active {
+            transform: translateY(0);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .toast {
+            position: fixed;
+            top: 24px;
+            right: 24px;
+            background: #10b981;
+            color: white;
+            padding: 16px 24px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            z-index: 10000;
+            transform: translateX(450px);
+            transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            font-weight: 500;
+        }
+
+        .toast.show {
+            transform: translateX(0);
+        }
+
+        .toast.error {
+            background: #ef4444;
+        }
+
+        .toast.info {
+            background: #0ea5e9;
+        }
+
+        .toast.warning {
+            background: #f59e0b;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+            }
+
+            .left-panel {
+                padding: 40px 30px;
+            }
+
+            .right-panel {
+                padding: 40px 30px;
+            }
+
+            .left-panel h1 {
+                font-size: 24px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="left-panel">
+            <h1>아주약품<br>제안제도 시스템</h1>
+            <p>더 나은 업무 환경을 위한<br>여러분의 아이디어를 기다립니다</p>
+            
+            <div class="features">
+                <div class="feature-item">
+                    <div class="feature-icon">✏️</div>
+                    <div>간편한 제안서 작성</div>
+                </div>
+                <div class="feature-item">
+                    <div class="feature-icon">📊</div>
+                    <div>실시간 진행 상황 확인</div>
+                </div>
+                <div class="feature-item">
+                    <div class="feature-icon">🔔</div>
+                    <div>즉각적인 피드백</div>
+                </div>
+                <div class="feature-item">
+                    <div class="feature-icon">📱</div>
+                    <div>모바일 완벽 지원</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="right-panel">
+            <div class="form-container">
+                <div class="tabs">
+                    <div class="tab active" onclick="switchTab('login', event)">로그인</div>
+                    <div class="tab" onclick="switchTab('signup', event)">회원가입</div>
+                </div>
+
+                <!-- 로그인 폼 -->
+                <div id="login" class="tab-content active">
+                    <form onsubmit="handleLogin(event)">
+                        <div class="form-group">
+                            <label class="form-label">사번</label>
+                            <input type="text" class="form-control" name="employeeId" required
+                                placeholder="사번을 입력하세요 (예: A197003 또는 admin)"
+                                style="text-transform: uppercase;"
+                                oninput="this.value = this.value.toUpperCase()">
+                            <small style="color: #6c757d; font-size: 12px; margin-top: 5px; display: block;">
+                                A로 시작하는 7자리 사번 (예: A197003) 또는 admin
+                            </small>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">비밀번호</label>
+                            <input type="password" class="form-control" name="password" required
+                                placeholder="비밀번호를 입력하세요">
+                            <small style="color: #6c757d; font-size: 12px; margin-top: 5px; display: block;">
+                                초기 비밀번호: ajupharm
+                            </small>
+                        </div>
+                        <button type="submit" class="btn btn-primary">로그인</button>
+                    </form>
+                </div>
+
+                <!-- 회원가입 폼 -->
+                <div id="signup" class="tab-content">
+                    <div style="text-align: center; padding: 40px 20px;">
+                        <div style="font-size: 48px; margin-bottom: 20px;">🔒</div>
+                        <h3 style="color: #0ea5e9; margin-bottom: 15px;">계정은 자동으로 생성됩니다</h3>
+                        <p style="color: #6c757d; line-height: 1.6; margin-bottom: 30px;">
+                            관리자가 조직도를 업로드하면<br>
+                            모든 직원의 계정이 자동으로 생성됩니다.
+                        </p>
+                        <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; text-align: left;">
+                            <h4 style="color: #495057; margin-bottom: 15px; font-size: 14px;">📌 로그인 정보</h4>
+                            <div style="margin-bottom: 10px;">
+                                <strong style="color: #0ea5e9;">아이디:</strong>
+                                <span style="color: #495057;">사번 (예: A197003)</span>
+                            </div>
+                            <div style="margin-bottom: 10px;">
+                                <strong style="color: #0ea5e9;">초기 비밀번호:</strong>
+                                <span style="color: #495057;">ajupharm</span>
+                            </div>
+                            <div style="color: #6c757d; font-size: 12px; margin-top: 15px; padding-top: 15px; border-top: 1px solid #dee2e6;">
+                                ℹ️ 첫 로그인 시 비밀번호를 변경해야 합니다
+                            </div>
+                        </div>
+                        <button type="button" class="btn btn-primary" onclick="switchTab('login', event)"
+                            style="margin-top: 20px;">
+                            로그인 화면으로
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <!-- 비밀번호 변경 모달 -->
+    <div id="passwordChangeModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); z-index: 9999; align-items: center; justify-content: center;">
+        <div style="background: white; border-radius: 20px; padding: 48px; max-width: 520px; width: 90%; box-shadow: 0 25px 70px rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.2);">
+            <h2 style="color: #0ea5e9; margin-bottom: 12px; font-size: 26px; font-weight: 700;">🔐 비밀번호 변경</h2>
+            <p style="color: #6c757d; margin-bottom: 30px; line-height: 1.6;">
+                첫 로그인입니다. 보안을 위해 비밀번호를 변경해주세요.
+            </p>
+            
+            <form id="passwordChangeForm" onsubmit="handlePasswordChange(event)">
+                <div class="form-group" style="margin-bottom: 20px;">
+                    <label class="form-label" style="display: block; margin-bottom: 8px; font-weight: 600;">새 비밀번호 (6자 이상)</label>
+                    <input type="password" class="form-control" id="newPassword" required minlength="6"
+                        placeholder="새 비밀번호를 입력하세요"
+                        style="width: 100%; padding: 12px; border: 2px solid #e9ecef; border-radius: 8px; font-size: 14px;">
+                </div>
+                
+                <div class="form-group" style="margin-bottom: 30px;">
+                    <label class="form-label" style="display: block; margin-bottom: 8px; font-weight: 600;">비밀번호 확인</label>
+                    <input type="password" class="form-control" id="confirmPassword" required minlength="6"
+                        placeholder="비밀번호를 다시 입력하세요"
+                        style="width: 100%; padding: 12px; border: 2px solid #e9ecef; border-radius: 8px; font-size: 14px;">
+                </div>
+                
+                <button type="submit" class="btn btn-primary" style="width: 100%; padding: 16px; background: linear-gradient(135deg, #0ea5e9 0%, #2dd4bf 100%); border: none; border-radius: 12px; color: white; font-weight: 600; cursor: pointer; font-size: 16px; box-shadow: 0 4px 15px rgba(14, 165, 233, 0.3); transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);">
+                    비밀번호 변경
+                </button>
+            </form>
+            
+            <p style="color: #dc3545; font-size: 12px; margin-top: 15px; text-align: center;">
+                ⚠️ 변경하지 않으면 로그인할 수 없습니다
+            </p>
+        </div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+
+    <script>
+        // Firebase 설정
+        const firebaseConfig = {
+            apiKey: "AIzaSyAv0y8cF86kDC-saDZA6K0Q5fZd6dk9H1Y",
+            authDomain: "suggestion-system-58def.firebaseapp.com",
+            projectId: "suggestion-system-58def",
+            storageBucket: "suggestion-system-58def.firebasestorage.app",
+            messagingSenderId: "755050605021",
+            appId: "1:755050605021:web:befd52c5516c3a3d3e2e34"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+
+        // Firebase 캐싱 활성화 (읽기 횟수 대폭 감소)
+        db.enablePersistence({ synchronizeTabs: true })
+            .catch((err) => {
+                if (err.code == 'failed-precondition') {
+                    // Multiple tabs open - caching disabled
+                } else if (err.code == 'unimplemented') {
+                    // Browser doesn't support caching
+                }
+            });
+
+        // 이미 로그인된 경우 리다이렉트
+        // 자동 로그인 방지: 명시적 로그인 시도가 없으면 리다이렉트하지 않음
+        let isLoginAttempt = false;
+
+        auth.onAuthStateChanged(async (user) => {
+            // 로그인 시도가 아니면 자동 리다이렉트 하지 않음
+            if (user && isLoginAttempt) {
+                try {
+                    const userDoc = await db.collection('users').doc(user.uid).get();
+                    if (userDoc.exists) {
+                        const userData = userDoc.data();
+
+                        // 비밀번호 변경 필요 여부 확인
+                        if (userData.passwordChanged !== true) {
+                            showToast('보안을 위해 비밀번호를 변경해주세요.', 'info');
+                            showPasswordChangeModal(user, userData);
+                            return; // 리다이렉트 중단
+                        }
+
+                        // 복수 권한 시스템 - 권한별 페이지 이동
+                        redirectBasedOnRoles(userData);
+                    }
+                } catch (error) {
+                    console.error('사용자 정보 확인 오류:', error);
+                }
+            }
+        });
+
+        // 탭 전환
+        function switchTab(tabName, event) {
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+
+            if (event && event.target) {
+                event.target.classList.add('active');
+            } else {
+                // event가 없을 경우 tabName에 해당하는 탭을 활성화
+                document.querySelector(`.tab[onclick*="'${tabName}'"]`)?.classList.add('active');
+            }
+            document.getElementById(tabName).classList.add('active');
+        }
+
+        // 로그인
+        async function handleLogin(e) {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const employeeId = formData.get('employeeId').toUpperCase().trim();
+            const password = formData.get('password');
+
+            try {
+                showToast('로그인 중...', 'info');
+
+                // 로그인 시도 플래그 설정
+                isLoginAttempt = true;
+
+                // 사번을 이메일 형식으로 변환 (Firebase Auth 내부용)
+                const email = `${employeeId}@ajupharm.co.kr`;
+
+                let userCredential;
+
+                // 먼저 Firestore에서 직원 정보 확인
+                const empDoc = await db.collection('employees').doc(employeeId).get();
+
+                if (!empDoc.exists) {
+                    throw new Error('등록되지 않은 사번입니다. 관리자에게 문의하세요.');
+                }
+
+                const empData = empDoc.data();
+
+                if (!empData.isActive) {
+                    throw new Error('재직 상태가 아닙니다. 관리자에게 문의하세요.');
+                }
+
+                // 먼저 로그인 시도
+                try {
+                    userCredential = await auth.signInWithEmailAndPassword(email, password);
+                } catch (loginError) {
+
+                    // 계정이 없는 경우
+                    if (loginError.code === 'auth/user-not-found' ||
+                        loginError.code === 'auth/invalid-login-credentials' ||
+                        loginError.code === 'auth/invalid-credential') {
+
+                        // 초기 비밀번호로만 계정 생성 가능
+                        if (password !== 'ajupharm') {
+                            throw new Error('등록되지 않은 계정입니다. 초기 비밀번호(ajupharm)로 먼저 로그인해주세요.');
+                        }
+
+                        showToast('계정 생성 중...', 'info');
+
+                        // Firebase Auth 계정 생성
+                        try {
+                            userCredential = await auth.createUserWithEmailAndPassword(email, password);
+                        } catch (createError) {
+                            if (createError.code === 'auth/email-already-in-use') {
+                                // 계정은 이미 존재함 - 초기 비밀번호로 로그인 시도
+                                try {
+                                    userCredential = await auth.signInWithEmailAndPassword(email, password);
+                                    showToast('기존 계정으로 로그인됩니다...', 'info');
+                                } catch (signInError) {
+                                    throw new Error('비밀번호가 올바르지 않습니다. 변경하신 비밀번호를 입력해주세요.');
+                                }
+                            } else {
+                                throw createError;
+                            }
+                        }
+
+                        // 권한 배열 생성
+                        let roles = ['user']; // 기본 권한
+
+                        // 관리자가 미리 설정한 권한이 있는지 확인
+                        if (empData.preassignedRoles && Array.isArray(empData.preassignedRoles)) {
+                            roles = empData.preassignedRoles;
+                        } else {
+                            // 자동 권한 부여
+                            // 관리자 권한
+                            if (employeeId === 'A197003' || employeeId === 'ADMIN') {
+                                roles.push('admin');
+                            }
+
+                            // 평가자 권한 (기존 isLeader 필드 활용)
+                            if (empData.isLeader) {
+                                const leaderLevel = empData.leaderLevel || 1;
+                                if (leaderLevel === 1) roles.push('firstReviewer');
+                                if (leaderLevel === 2) roles.push('secondReviewer');
+                                if (leaderLevel === 3) roles.push('thirdReviewer');
+                            }
+                        }
+
+                        // Firestore users 컬렉션에 프로필 생성
+                        await db.collection('users').doc(userCredential.user.uid).set({
+                            employeeId: employeeId,
+                            email: email,
+                            displayName: empData.name,
+                            department: empData.department,
+                            position: empData.position,
+                            jobTitle: empData.jobTitle,
+                            role: (employeeId === 'A197003' || employeeId === 'ADMIN') ? 'admin' : 'user',  // 기존 호환성
+                            roles: roles, // 새로운 복수 권한 시스템
+                            isEvaluator: empData.isLeader || false,
+                            leaderLevel: empData.leaderLevel || null,
+                            passwordChanged: false,
+                            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                        });
+
+                        showToast('계정이 생성되었습니다!', 'success');
+                    } else {
+                        // 비밀번호가 틀린 경우
+                        throw new Error('비밀번호가 올바르지 않습니다.');
+                    }
+                }
+                
+                // 사용자 정보 확인
+                const userDoc = await db.collection('users').doc(userCredential.user.uid).get();
+
+                let userData;
+                if (!userDoc.exists) {
+                    // Firestore users 문서가 없으면 재생성
+                    showToast('사용자 정보 재생성 중...', 'info');
+
+                    // 권한 배열 생성
+                    let roles = ['user'];
+                    if (empData.preassignedRoles && Array.isArray(empData.preassignedRoles)) {
+                        roles = empData.preassignedRoles;
+                    } else {
+                        if (employeeId === 'A197003' || employeeId === 'ADMIN') roles.push('admin');
+                        if (empData.isLeader) {
+                            const leaderLevel = empData.leaderLevel || 1;
+                            if (leaderLevel === 1) roles.push('firstReviewer');
+                            if (leaderLevel === 2) roles.push('secondReviewer');
+                            if (leaderLevel === 3) roles.push('thirdReviewer');
+                        }
+                    }
+
+                    // Firestore users 문서 재생성
+                    userData = {
+                        employeeId: employeeId,
+                        email: email,
+                        displayName: empData.name,
+                        department: empData.department,
+                        position: empData.position,
+                        jobTitle: empData.jobTitle,
+                        role: (employeeId === 'A197003' || employeeId === 'ADMIN') ? 'admin' : 'user',
+                        roles: roles,
+                        isEvaluator: empData.isLeader || false,
+                        leaderLevel: empData.leaderLevel || null,
+                        passwordChanged: false,
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                    };
+
+                    await db.collection('users').doc(userCredential.user.uid).set(userData);
+                } else {
+                    userData = userDoc.data();
+                }
+
+                // 비밀번호 초기화 요청 확인
+                if (userData.passwordResetRequested === true) {
+                    showToast('관리자가 비밀번호 초기화를 요청했습니다. 비밀번호를 변경해주세요.', 'warning');
+
+                    setTimeout(() => {
+                        showPasswordChangeModal(userCredential.user, userData);
+                    }, 500);
+                    return;
+                }
+
+                // 첫 로그인 체크 (비밀번호 변경 필요)
+                if (userData.passwordChanged !== true) {
+                    showToast('첫 로그인입니다. 비밀번호를 변경해주세요.', 'info');
+
+                    setTimeout(() => {
+                        // 비밀번호 변경 모달 표시
+                        showPasswordChangeModal(userCredential.user, userData);
+                    }, 500);
+                    return;
+                }
+                
+                showToast('로그인 성공!', 'success');
+
+                setTimeout(() => {
+                    redirectBasedOnRoles(userData);
+                }, 500);
+
+            } catch (error) {
+                console.error('로그인 오류:', error);
+                let message = '로그인 실패';
+                
+                if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-login-credentials') {
+                    message = '등록되지 않은 사번이거나 비밀번호가 올바르지 않습니다. 초기 비밀번호는 ajupharm입니다.';
+                } else if (error.code === 'auth/wrong-password') {
+                    message = '비밀번호가 올바르지 않습니다.';
+                } else if (error.code === 'auth/invalid-email') {
+                    message = '사번 형식이 올바르지 않습니다. (A로 시작하는 7자리)';
+                } else if (error.code === 'auth/too-many-requests') {
+                    message = '너무 많은 로그인 시도. 잠시 후 다시 시도해주세요.';
+                } else if (error.code === 'auth/email-already-in-use') {
+                    message = '이미 계정이 있습니다. 비밀번호를 확인해주세요.';
+                } else if (error.message) {
+                    message = error.message;
+                }
+                
+                showToast(message, 'error');
+            }
+        }
+
+        // 회원가입
+        async function handleSignup(e) {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const email = formData.get('email');
+            const password = formData.get('password');
+            const displayName = formData.get('displayName');
+            const department = formData.get('department');
+
+            try {
+                showToast('회원가입 중...', 'info');
+                
+                // Firebase Auth 사용자 생성
+                const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+                
+                // 관리자 판단
+                const adminEmails = ['admin@ajupharm.co.kr', 'admin@company.com'];
+                const role = adminEmails.includes(email.toLowerCase()) ? 'admin' : 'user';
+                
+                // Firestore에 사용자 정보 저장
+                await db.collection('users').doc(userCredential.user.uid).set({
+                    email: email,
+                    displayName: displayName,
+                    department: department,
+                    role: role,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+
+                showToast('회원가입 성공! 로그인 페이지로 이동합니다.', 'success');
+                
+                // 로그아웃 후 로그인 탭으로 전환
+                await auth.signOut();
+                setTimeout(() => {
+                    switchTab('login', null);
+                    e.target.reset();
+                }, 1500);
+
+            } catch (error) {
+                console.error('회원가입 오류:', error);
+                let message = '회원가입 실패';
+                
+                if (error.code === 'auth/email-already-in-use') {
+                    message = '이미 사용 중인 이메일입니다.';
+                } else if (error.code === 'auth/invalid-email') {
+                    message = '이메일 형식이 올바르지 않습니다.';
+                } else if (error.code === 'auth/weak-password') {
+                    message = '비밀번호는 6자 이상이어야 합니다.';
+                }
+                
+                showToast(message, 'error');
+            }
+        }
+
+        // Toast 메시지
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = `toast ${type} show`;
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+
+        // 비밀번호 변경 모달 표시
+        let currentUserForPasswordChange = null;
+        let currentUserDataForPasswordChange = null;
+
+        function showPasswordChangeModal(user, userData) {
+            currentUserForPasswordChange = user;
+            currentUserDataForPasswordChange = userData;
+            
+            const modal = document.getElementById('passwordChangeModal');
+            modal.style.display = 'flex';
+            
+            // ESC 키로 닫기 방지
+            document.addEventListener('keydown', preventModalClose);
+        }
+
+        function preventModalClose(e) {
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                showToast('비밀번호를 변경해야 합니다!', 'error');
+            }
+        }
+
+        // 비밀번호 변경 처리
+        async function handlePasswordChange(e) {
+            e.preventDefault();
+            
+            const newPassword = document.getElementById('newPassword').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+
+            // 비밀번호 일치 확인
+            if (newPassword !== confirmPassword) {
+                showToast('비밀번호가 일치하지 않습니다.', 'error');
+                return;
+            }
+
+            // 최소 길이 확인
+            if (newPassword.length < 6) {
+                showToast('비밀번호는 6자 이상이어야 합니다.', 'error');
+                return;
+            }
+
+            // 초기 비밀번호와 동일한지 확인
+            if (newPassword === 'ajupharm') {
+                showToast('초기 비밀번호와 다른 비밀번호를 설정해주세요.', 'error');
+                return;
+            }
+
+            try {
+                showToast('비밀번호 변경 중...', 'info');
+
+                // Firebase Auth에서 비밀번호 업데이트
+                await currentUserForPasswordChange.updatePassword(newPassword);
+
+                // Firestore에 passwordChanged 플래그 업데이트 및 초기화 요청 제거
+                await db.collection('users').doc(currentUserForPasswordChange.uid).update({
+                    passwordChanged: true,
+                    passwordChangedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    passwordResetRequested: false,  // 초기화 요청 플래그 제거
+                    accountDeletedForReset: false   // 계정 삭제 플래그 제거
+                });
+
+                showToast('비밀번호가 변경되었습니다!', 'success');
+
+                // 모달 닫기
+                document.getElementById('passwordChangeModal').style.display = 'none';
+                document.removeEventListener('keydown', preventModalClose);
+
+                // 페이지 이동
+                setTimeout(() => {
+                    redirectBasedOnRoles(currentUserDataForPasswordChange);
+                }, 500);
+
+            } catch (error) {
+                console.error('비밀번호 변경 오류:', error);
+                let message = '비밀번호 변경 실패';
+
+                if (error.code === 'auth/weak-password') {
+                    message = '비밀번호가 너무 약합니다. 더 강력한 비밀번호를 사용하세요.';
+                } else if (error.code === 'auth/requires-recent-login') {
+                    message = '보안을 위해 다시 로그인해주세요.';
+                    await auth.signOut();
+                    window.location.reload();
+                }
+
+                showToast(message, 'error');
+            }
+        }
+
+        // 복수 권한 시스템 - 권한별 페이지 리다이렉트
+        function redirectBasedOnRoles(userData) {
+            // roles 배열이 없으면 기존 시스템과 호환성 유지
+            if (!userData.roles || userData.roles.length === 0) {
+                // 기존 시스템 호환
+                if (userData.role === 'admin') {
+                    window.location.href = 'admin.html';
+                } else if (userData.isEvaluator === true) {
+                    window.location.href = 'leader.html';
+                } else {
+                    window.location.href = 'dashboard.html';
+                }
+                return;
+            }
+
+            const roles = userData.roles;
+
+            // 관리자 권한 최우선
+            if (roles.includes('admin')) {
+                window.location.href = 'admin.html';
+                return;
+            }
+
+            // 리더 권한 확인
+            if (roles.includes('firstReviewer') || roles.includes('secondReviewer') || roles.includes('thirdReviewer')) {
+                window.location.href = 'leader.html';
+                return;
+            }
+
+            // 일반 사용자는 dashboard로
+            window.location.href = 'dashboard.html';
+        }
+    </script>
+</body>
+</html>

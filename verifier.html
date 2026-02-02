@@ -1,0 +1,2047 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>유형효과 검증담당자 시스템</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+
+        .container {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* 사이드바 */
+        .sidebar {
+            width: 280px;
+            background: white;
+            box-shadow: 2px 0 15px rgba(0,0,0,0.1);
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+            z-index: 1000;
+        }
+
+        .sidebar-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px 25px;
+            text-align: center;
+        }
+
+        .sidebar-header h2 {
+            font-size: 20px;
+            margin-bottom: 10px;
+        }
+
+        .user-info {
+            opacity: 0.9;
+            font-size: 14px;
+        }
+
+        .nav-menu {
+            padding: 20px 0;
+        }
+
+        .nav-item {
+            display: block;
+            width: 100%;
+            padding: 15px 25px;
+            background: none;
+            border: none;
+            text-align: left;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s;
+            color: #495057;
+            border-left: 4px solid transparent;
+        }
+
+        .nav-item:hover {
+            background: #f8f9fa;
+            color: #667eea;
+            border-left-color: #667eea;
+        }
+
+        .nav-item.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .badge {
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+            background: #dc3545;
+            color: white;
+            margin-left: 10px;
+        }
+
+        .logout-btn {
+            margin: 20px 25px;
+            width: calc(100% - 50px);
+            padding: 12px;
+            background: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        /* 메인 콘텐츠 */
+        .main-content {
+            flex: 1;
+            margin-left: 280px;
+            padding: 40px;
+        }
+
+        .page-header {
+            margin-bottom: 30px;
+        }
+
+        .page-header h1 {
+            color: white;
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+
+        .page-header p {
+            color: rgba(255,255,255,0.9);
+            font-size: 16px;
+        }
+
+        /* 통계 카드 */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .stat-card h3 {
+            font-size: 14px;
+            color: #6c757d;
+            margin-bottom: 10px;
+        }
+
+        .stat-card .number {
+            font-size: 36px;
+            font-weight: 600;
+            color: #667eea;
+        }
+
+        /* 카드 */
+        .card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .card-header {
+            padding: 20px 25px;
+            border-bottom: 1px solid #e9ecef;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .card-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .card-body {
+            padding: 25px;
+        }
+
+        /* 테이블 */
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .table th {
+            background: #f8f9fa;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            color: #495057;
+            font-size: 14px;
+            border-bottom: 2px solid #dee2e6;
+        }
+
+        .table td {
+            padding: 15px 12px;
+            border-bottom: 1px solid #e9ecef;
+            font-size: 14px;
+        }
+
+        .table tr:hover {
+            background: #f8f9fa;
+        }
+
+        /* 버튼 */
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+
+        .btn-warning {
+            background: #ffc107;
+            color: #000;
+        }
+
+        .btn-sm {
+            padding: 6px 12px;
+            font-size: 12px;
+        }
+
+        /* 콘텐츠 섹션 */
+        .content-section {
+            display: none;
+        }
+
+        .content-section.active {
+            display: block;
+        }
+
+        /* 모달 */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.show {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            max-width: 900px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #e9ecef;
+        }
+
+        .modal-header h3 {
+            font-size: 24px;
+            color: #333;
+        }
+
+        .close-btn {
+            float: right;
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #999;
+        }
+
+        .modal-footer {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 2px solid #e9ecef;
+        }
+
+        /* 폼 */
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+            font-size: 14px;
+        }
+
+        .form-input, .form-textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        .form-input:focus, .form-textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .form-textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        .info-box {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            border-left: 4px solid #667eea;
+        }
+
+        .info-box strong {
+            color: #667eea;
+        }
+
+        .status-badge {
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .status-pending {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .status-completed {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-rejected {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: white;
+            padding: 15px 25px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 3000;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.3s;
+        }
+
+        .toast.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .toast.success {
+            border-left: 4px solid #28a745;
+        }
+
+        .toast.error {
+            border-left: 4px solid #dc3545;
+        }
+
+        .highlight {
+            background: #fff3cd;
+            padding: 2px 5px;
+            border-radius: 4px;
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-100%);
+            }
+
+            .main-content {
+                margin-left: 0;
+                padding: 20px;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 사이드바 -->
+        <div class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <h2>💰 유형효과 검증</h2>
+                <div class="user-info" id="userInfo">
+                    로딩 중...
+                </div>
+            </div>
+
+            <div class="nav-menu">
+                <button class="nav-item active" onclick="showSection('dashboard')">
+                    📊 대시보드
+                </button>
+                <button class="nav-item" onclick="showSection('pending')">
+                    ⏰ 검증 대기 <span class="badge" id="pendingCount">0</span>
+                </button>
+                <button class="nav-item" onclick="showSection('completed')">
+                    ✅ 검증 완료
+                </button>
+                <button class="nav-item" onclick="showSection('allSuggestions')">
+                    📋 전체 제안
+                </button>
+                <button class="nav-item" onclick="showSection('stats')">
+                    📈 통계
+                </button>
+            </div>
+
+            <button class="logout-btn" onclick="window.location.href='dashboard.html'" style="background: #667eea; margin-bottom: 10px;">
+                ← 대시보드로 돌아가기
+            </button>
+            <button class="logout-btn" onclick="logout()">로그아웃</button>
+        </div>
+
+        <!-- 메인 콘텐츠 -->
+        <div class="main-content">
+            <!-- 대시보드 섹션 -->
+            <div id="dashboard" class="content-section active">
+                <div class="page-header">
+                    <h1>📊 대시보드</h1>
+                    <p>유형효과 검증 현황을 확인하세요</p>
+                </div>
+
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <h3>검증 대기</h3>
+                        <div class="number" id="statPending">0</div>
+                        <p style="color: #999; font-size: 12px; margin-top: 5px;">즉시 검증 필요</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>오늘 검증</h3>
+                        <div class="number" style="color: #28a745;" id="statToday">0</div>
+                        <p style="color: #999; font-size: 12px; margin-top: 5px;">오늘 검증 완료</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>월간 검증</h3>
+                        <div class="number" style="color: #17a2b8;" id="statMonth">0</div>
+                        <p style="color: #999; font-size: 12px; margin-top: 5px;">이번 달 총합</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>평균 조정률</h3>
+                        <div class="number" style="color: #ffc107; font-size: 28px;" id="statAdjustRate">100%</div>
+                        <p style="color: #999; font-size: 12px; margin-top: 5px;">확정/예상 금액 비율</p>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">최근 검증 대기 제안서</h3>
+                        <button class="btn btn-primary btn-sm" onclick="showSection('pending')">전체 보기</button>
+                    </div>
+                    <div class="card-body">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>제안번호</th>
+                                    <th>제안자</th>
+                                    <th>제목</th>
+                                    <th>예상 절감액</th>
+                                    <th>대기일수</th>
+                                    <th>작업</th>
+                                </tr>
+                            </thead>
+                            <tbody id="recentPendingList">
+                                <tr>
+                                    <td colspan="6" style="text-align: center; padding: 40px; color: #999;">
+                                        검증 대기 중인 제안서가 없습니다.
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 검증 대기 섹션 -->
+            <div id="pending" class="content-section">
+                <div class="page-header">
+                    <h1>⏰ 검증 대기</h1>
+                    <p>유형효과 검증이 필요한 제안서 목록입니다</p>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">검증 대기 제안서</h3>
+                        <button class="btn btn-primary btn-sm" onclick="loadPendingVerifications()">🔄 새로고침</button>
+                    </div>
+                    <div class="card-body">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 120px;">제안번호</th>
+                                    <th style="width: 100px;">제안자</th>
+                                    <th style="width: 100px;">부서</th>
+                                    <th>제목</th>
+                                    <th style="width: 120px;">예상 절감액</th>
+                                    <th style="width: 100px;">제출일</th>
+                                    <th style="width: 80px;">대기일</th>
+                                    <th style="width: 120px;">작업</th>
+                                </tr>
+                            </thead>
+                            <tbody id="pendingList">
+                                <tr>
+                                    <td colspan="8" style="text-align: center; padding: 40px; color: #999;">
+                                        로딩 중...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 검증 완료 섹션 -->
+            <div id="completed" class="content-section">
+                <div class="page-header">
+                    <h1>✅ 검증 완료</h1>
+                    <p>검증 완료된 제안서 목록입니다</p>
+                </div>
+
+                <div class="card">
+                    <div class="card-body">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>제안번호</th>
+                                    <th>제안자</th>
+                                    <th>제목</th>
+                                    <th>예상 금액</th>
+                                    <th>확정 금액</th>
+                                    <th>조정률</th>
+                                    <th>검증일</th>
+                                    <th>작업</th>
+                                </tr>
+                            </thead>
+                            <tbody id="completedList">
+                                <tr>
+                                    <td colspan="8" style="text-align: center; padding: 40px; color: #999;">
+                                        로딩 중...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 전체 제안 섹션 -->
+            <div id="allSuggestions" class="content-section">
+                <div class="page-header">
+                    <h1>📋 전체 제안</h1>
+                    <p>모든 사용자의 제안서 목록입니다</p>
+                </div>
+
+                <div class="card">
+                    <div class="card-body">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>제안번호</th>
+                                    <th>제안자</th>
+                                    <th>부서</th>
+                                    <th>제안내용</th>
+                                    <th>상태</th>
+                                    <th>접수일</th>
+                                    <th>작업</th>
+                                </tr>
+                            </thead>
+                            <tbody id="allSuggestionsList">
+                                <tr>
+                                    <td colspan="7" style="text-align: center; padding: 40px; color: #999;">
+                                        로딩 중...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 통계 섹션 -->
+            <div id="stats" class="content-section">
+                <div class="page-header">
+                    <h1>📈 통계</h1>
+                    <p>유형효과 검증 통계입니다</p>
+                </div>
+
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <h3>총 검증 건수</h3>
+                        <div class="number" id="statsTotal">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>평균 확정 금액</h3>
+                        <div class="number" style="color: #28a745; font-size: 24px;" id="statsAvgAmount">0원</div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>평균 조정률</h3>
+                        <div class="number" style="color: #17a2b8;" id="statsAvgAdjustRate">100%</div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>평균 처리 시간</h3>
+                        <div class="number" style="color: #ffc107; font-size: 28px;" id="statsAvgTime">0일</div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">부서별 예상 금액 정확도</h3>
+                    </div>
+                    <div class="card-body" id="deptStats">
+                        <div style="text-align: center; padding: 40px; color: #999;">
+                            통계를 계산하는 중...
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 검증 모달 -->
+    <div id="verifyModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>💰 유형효과 검증</h3>
+                <button class="close-btn" onclick="closeVerifyModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <!-- 제안서 정보 -->
+                <div class="info-box">
+                    <strong>제안번호:</strong> <span id="modalSugNumber"></span><br>
+                    <strong>제안자:</strong> <span id="modalProposer"></span><br>
+                    <strong>부서:</strong> <span id="modalDepartment"></span><br>
+                    <strong>제출일:</strong> <span id="modalSubmitDate"></span>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">제안 내용</label>
+                    <div style="background: #f8f9fa; padding: 15px; border-radius: 8px;">
+                        <p id="modalTitle" style="font-weight: 600; margin-bottom: 10px;"></p>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">현황 및 개선 내용</label>
+                    <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 10px;">
+                        <h4 style="font-size: 14px; margin-bottom: 5px;">기존실시내용:</h4>
+                        <p id="modalCurrentSituation" style="color: #666; font-size: 14px; white-space: pre-wrap;"></p>
+                    </div>
+                    <div style="background: #f8f9fa; padding: 15px; border-radius: 8px;">
+                        <h4 style="font-size: 14px; margin-bottom: 5px;">변경(신규)내용:</h4>
+                        <p id="modalImprovementPlan" style="color: #666; font-size: 14px; white-space: pre-wrap;"></p>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">제안자 입력 정보</label>
+                    <div style="background: #fff3cd; padding: 15px; border-radius: 8px;">
+                        <div><strong>예상 절감 금액:</strong> <span id="modalExpectedSaving" class="highlight"></span> 원/년</div>
+                        <div style="margin-top: 10px;"><strong>산출 근거:</strong></div>
+                        <div id="modalSavingBasis" style="margin-top: 5px; color: #666; white-space: pre-wrap;"></div>
+                    </div>
+                </div>
+
+                <!-- AI 기준 요청 섹션 -->
+                <hr style="margin: 30px 0; border: none; border-top: 2px solid #e9ecef;">
+                <h4 style="margin-bottom: 15px; color: #667eea;">🤖 AI 유형효과 기준 분석</h4>
+
+                <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                    <p style="color: #666; font-size: 14px; margin-bottom: 10px;">
+                        AI가 제안서 내용을 분석하여 유형효과 검증 기준을 제시합니다.
+                    </p>
+                    <button class="btn btn-primary" onclick="openPromptEditor()" id="aiRequestBtn" style="width: 100%;">
+                        🤖 AI 기준 요청하기
+                    </button>
+                </div>
+
+                <div id="aiAnalysisResult" style="display: none; background: #e3f2fd; padding: 20px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #2196f3;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <h4 style="color: #1976d2; margin: 0;">💡 AI 분석 결과</h4>
+                        <button class="btn btn-sm" onclick="closeAIAnalysis()" style="background: #fff; color: #666; padding: 4px 8px;">✕</button>
+                    </div>
+                    <div id="aiAnalysisContent" style="color: #333; font-size: 14px; line-height: 1.6; white-space: pre-wrap;"></div>
+                </div>
+
+                <!-- 검증 입력 -->
+                <h4 style="margin-bottom: 20px; color: #667eea;">💰 검증 정보 입력</h4>
+
+                <div class="form-group">
+                    <label class="form-label">확정 금액 (원/년) *</label>
+                    <input type="number" class="form-input" id="verifiedAmount" placeholder="1000000" min="0" required oninput="calculateEffectScore()">
+                    <div id="effectScoreDisplay" style="margin-top: 10px; padding: 10px; background: #d4edda; border-radius: 8px; display: none;">
+                        <strong>자동 계산된 유형효과 점수:</strong> <span id="effectScoreValue" style="font-size: 20px; color: #28a745; font-weight: 600;">0</span>점
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">금액 조정 사유 (예상 금액과 다를 경우 필수)</label>
+                    <textarea class="form-textarea" id="adjustmentReason" placeholder="예상 금액과 확정 금액이 다른 경우 그 이유를 상세히 입력하세요"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">검증 의견</label>
+                    <textarea class="form-textarea" id="verificationNote" placeholder="검증 과정에서의 의견을 입력하세요"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeVerifyModal()">취소</button>
+                <button class="btn btn-danger" onclick="rejectVerification()">검증 불가</button>
+                <button class="btn btn-warning" onclick="requestMoreInfo()">추가 자료 요청</button>
+                <button class="btn btn-success" onclick="completeVerification()">검증 완료</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 상세보기 모달 -->
+    <div id="detailModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>제안서 상세보기</h3>
+                <button class="close-btn" onclick="closeDetailModal()">×</button>
+            </div>
+            <div class="modal-body" id="detailContent"></div>
+        </div>
+    </div>
+
+    <!-- Toast 알림 -->
+    <div class="toast" id="toast"></div>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+
+    <script>
+        // Firebase 설정
+        const firebaseConfig = {
+            apiKey: "AIzaSyAv0y8cF86kDC-saDZA6K0Q5fZd6dk9H1Y",
+            authDomain: "suggestion-system-58def.firebaseapp.com",
+            projectId: "suggestion-system-58def",
+            storageBucket: "suggestion-system-58def.firebasestorage.app",
+            messagingSenderId: "755050605021",
+            appId: "1:755050605021:web:befd52c5516c3a3d3e2e34"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+
+        // Firebase 캐싱 활성화 (읽기 횟수 대폭 감소)
+        db.enablePersistence({ synchronizeTabs: true })
+            .catch((err) => {
+                if (err.code == 'failed-precondition') {
+                    // Multiple tabs open - caching disabled
+                } else if (err.code == 'unimplemented') {
+                    // Browser doesn't support caching
+                }
+            });
+
+        // 전역 변수
+        let currentUser = null;
+        let currentVerifier = null;
+        let currentSuggestion = null;
+
+        // 유형효과 점수 기준
+        const effectScoreRanges = [
+            { min: 0, max: 500000, score: 15 },
+            { min: 500001, max: 1000000, score: 20 },
+            { min: 1000001, max: 5000000, score: 25 },
+            { min: 5000001, max: 10000000, score: 30 },
+            { min: 10000001, max: 20000000, score: 35 },
+            { min: 20000001, max: 30000000, score: 40 },
+            { min: 30000001, max: 40000000, score: 45 },
+            { min: 40000001, max: 50000000, score: 50 },
+            { min: 50000001, max: Infinity, score: 55 } // 별도심사
+        ];
+
+        // 인증 확인
+        auth.onAuthStateChanged(async (user) => {
+            if (!user) {
+                window.location.href = 'index.html';
+                return;
+            }
+
+            currentUser = user;
+
+            try {
+                const userDoc = await db.collection('users').doc(user.uid).get();
+                if (!userDoc.exists) {
+                    showToast('사용자 정보를 찾을 수 없습니다.', 'error');
+                    auth.signOut();
+                    return;
+                }
+
+                const userData = userDoc.data();
+
+                // roles 배열이 없으면 기본값 설정 (기존 시스템 호환)
+                if (!userData.roles || userData.roles.length === 0) {
+                    const defaultRoles = ['user'];
+                    if (userData.role === 'admin') defaultRoles.push('admin');
+                    if (userData.isEvaluator) {
+                        if (userData.leaderLevel === 1) defaultRoles.push('firstReviewer');
+                        else if (userData.leaderLevel === 2) defaultRoles.push('secondReviewer');
+                        else if (userData.leaderLevel === 3) defaultRoles.push('thirdReviewer');
+                        else defaultRoles.push('firstReviewer');
+                    }
+                    try {
+                        await db.collection('users').doc(user.uid).update({ roles: defaultRoles });
+                        userData.roles = defaultRoles;
+                    } catch (updateError) {
+                        userData.roles = defaultRoles;
+                    }
+                }
+
+                currentVerifier = userData;
+
+                // 검증담당자 권한 확인
+                if (!userData.roles.includes('effectVerifier')) {
+                    showToast('유형효과 검증담당자 권한이 없습니다.', 'error');
+                    setTimeout(() => {
+                        window.location.href = 'dashboard.html';
+                    }, 2000);
+                    return;
+                }
+
+                // 사용자 정보 표시
+                document.getElementById('userInfo').innerHTML = `
+                    <strong>${userData.displayName}</strong><br>
+                    ${userData.department || ''}<br>
+                    유형효과 검증담당자
+                `;
+
+                // 데이터 로드
+                loadDashboard();
+                loadPendingVerifications();
+                loadCompletedVerifications();
+                loadStats();
+
+            } catch (error) {
+                console.error('사용자 정보 로드 오류:', error);
+                showToast('사용자 정보를 불러오는데 실패했습니다.', 'error');
+            }
+        });
+
+        // 대시보드 로드
+        async function loadDashboard() {
+            try {
+                // 검증 대기 건수
+                const pendingSnapshot = await db.collection('suggestions')
+                    .where('hasTypicalEffect', '==', true)
+                    .where('effectVerification.status', '==', 'pending')
+                    .get();
+
+                const pendingCount = pendingSnapshot.size;
+                document.getElementById('statPending').textContent = pendingCount;
+                document.getElementById('pendingCount').textContent = pendingCount;
+
+                // 오늘 검증
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+
+                const todaySnapshot = await db.collection('suggestions')
+                    .where('effectVerification.verifierId', '==', currentVerifier.employeeId)
+                    .where('effectVerification.verifiedAt', '>=', today)
+                    .get();
+
+                document.getElementById('statToday').textContent = todaySnapshot.size;
+
+                // 이번 달 검증
+                const monthStart = new Date();
+                monthStart.setDate(1);
+                monthStart.setHours(0, 0, 0, 0);
+
+                const monthSnapshot = await db.collection('suggestions')
+                    .where('effectVerification.verifierId', '==', currentVerifier.employeeId)
+                    .where('effectVerification.verifiedAt', '>=', monthStart)
+                    .get();
+
+                document.getElementById('statMonth').textContent = monthSnapshot.size;
+
+                // 평균 조정률 계산
+                let totalAdjustRate = 0;
+                let count = 0;
+                monthSnapshot.forEach(doc => {
+                    const data = doc.data();
+                    if (data.effectVerification && data.effectVerification.originalAmount > 0) {
+                        const rate = (data.effectVerification.verifiedAmount / data.effectVerification.originalAmount) * 100;
+                        totalAdjustRate += rate;
+                        count++;
+                    }
+                });
+
+                const avgRate = count > 0 ? Math.round(totalAdjustRate / count) : 100;
+                document.getElementById('statAdjustRate').textContent = avgRate + '%';
+
+                // 최근 검증 대기 제안서 (최대 5개)
+                const recentDocs = pendingSnapshot.docs.slice(0, 5);
+                displayRecentPending(recentDocs);
+
+            } catch (error) {
+                console.error('대시보드 로드 오류:', error);
+            }
+        }
+
+        // 최근 검증 대기 제안서 표시
+        function displayRecentPending(docs) {
+            const tbody = document.getElementById('recentPendingList');
+
+            if (docs.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" style="text-align: center; padding: 40px; color: #999;">
+                            검증 대기 중인 제안서가 없습니다.
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            tbody.innerHTML = docs.map(doc => {
+                const data = doc.data();
+                const waitDays = calculateWaitDays(data.createdAt);
+                return `
+                    <tr>
+                        <td>${data.suggestionNumber}</td>
+                        <td>${data.proposer}</td>
+                        <td>${data.title}</td>
+                        <td style="text-align: right; font-weight: 600; color: #28a745;">
+                            ${formatNumber(data.expectedSaving)}원
+                        </td>
+                        <td>${waitDays}일</td>
+                        <td>
+                            <button class="btn btn-primary btn-sm" onclick="openVerifyModal('${doc.id}')">
+                                검증하기
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        // 검증 대기 목록 로드
+        async function loadPendingVerifications() {
+            try {
+                const snapshot = await db.collection('suggestions')
+                    .where('hasTypicalEffect', '==', true)
+                    .where('effectVerification.status', '==', 'pending')
+                    .get();
+
+                const tbody = document.getElementById('pendingList');
+
+                if (snapshot.empty) {
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="8" style="text-align: center; padding: 40px; color: #999;">
+                                검증 대기 중인 제안서가 없습니다.
+                            </td>
+                        </tr>
+                    `;
+                    return;
+                }
+
+                // 클라이언트에서 정렬 (오래된 순)
+                const sortedDocs = snapshot.docs.sort((a, b) => {
+                    const timeA = a.data().createdAt?.toDate?.() || new Date(0);
+                    const timeB = b.data().createdAt?.toDate?.() || new Date(0);
+                    return timeA - timeB; // 오래된 순
+                });
+
+                tbody.innerHTML = sortedDocs.map(doc => {
+                    const data = doc.data();
+                    const waitDays = calculateWaitDays(data.createdAt);
+                    return `
+                        <tr>
+                            <td>${data.suggestionNumber}</td>
+                            <td>${data.proposer}</td>
+                            <td>${data.department}</td>
+                            <td><strong>${data.title}</strong></td>
+                            <td style="text-align: right; font-weight: 600; color: #28a745;">
+                                ${formatNumber(data.expectedSaving)}
+                            </td>
+                            <td>${formatDate(data.createdAt)}</td>
+                            <td style="text-align: center;">
+                                <span class="${waitDays > 3 ? 'status-rejected' : 'status-pending'}">${waitDays}일</span>
+                            </td>
+                            <td>
+                                <button class="btn btn-primary btn-sm" onclick="openVerifyModal('${doc.id}')">
+                                    검증하기
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+
+            } catch (error) {
+                console.error('검증 대기 목록 로드 오류:', error);
+                showToast('목록을 불러오는데 실패했습니다.', 'error');
+            }
+        }
+
+        // 검증 완료 목록 로드
+        async function loadCompletedVerifications() {
+            try {
+                const snapshot = await db.collection('suggestions')
+                    .where('effectVerification.verifierId', '==', currentVerifier.employeeId)
+                    .where('effectVerification.status', '==', 'completed')
+                    .get();
+
+                const tbody = document.getElementById('completedList');
+
+                if (snapshot.empty) {
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="8" style="text-align: center; padding: 40px; color: #999;">
+                                검증 완료된 제안서가 없습니다.
+                            </td>
+                        </tr>
+                    `;
+                    return;
+                }
+
+                // 클라이언트에서 정렬 및 제한 (최신순, 50개)
+                const sortedDocs = snapshot.docs.sort((a, b) => {
+                    const timeA = a.data().effectVerification?.verifiedAt?.toDate?.() || new Date(0);
+                    const timeB = b.data().effectVerification?.verifiedAt?.toDate?.() || new Date(0);
+                    return timeB - timeA; // 최신순
+                }).slice(0, 50);
+
+                tbody.innerHTML = sortedDocs.map(doc => {
+                    const data = doc.data();
+                    const verification = data.effectVerification;
+                    const adjustRate = verification.originalAmount > 0
+                        ? Math.round((verification.verifiedAmount / verification.originalAmount) * 100)
+                        : 100;
+
+                    return `
+                        <tr>
+                            <td>${data.suggestionNumber}</td>
+                            <td>${data.proposer}</td>
+                            <td>${data.title}</td>
+                            <td style="text-align: right;">
+                                ${formatNumber(verification.originalAmount)}원
+                            </td>
+                            <td style="text-align: right; font-weight: 600; color: #28a745;">
+                                ${formatNumber(verification.verifiedAmount)}원
+                            </td>
+                            <td style="text-align: center;">
+                                <span class="status-${adjustRate >= 80 ? 'completed' : 'rejected'}">${adjustRate}%</span>
+                            </td>
+                            <td>${formatDate(verification.verifiedAt)}</td>
+                            <td>
+                                <button class="btn btn-secondary btn-sm" onclick="viewVerification('${doc.id}')">
+                                    상세보기
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+
+            } catch (error) {
+                console.error('검증 완료 목록 로드 오류:', error);
+            }
+        }
+
+        // 전체 제안 로드
+        async function loadAllSuggestions() {
+            try {
+
+                // 모든 사용자의 제안 조회 (orderBy 제거하여 권한 문제 해결)
+                const snapshot = await db.collection('suggestions')
+                    .limit(1000)
+                    .get();
+
+                const tbody = document.getElementById('allSuggestionsList');
+
+                if (snapshot.empty) {
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="7" style="text-align: center; padding: 40px; color: #999;">
+                                제안서가 없습니다.
+                            </td>
+                        </tr>
+                    `;
+                    return;
+                }
+
+                // 클라이언트에서 정렬 (최신순)
+                const sortedDocs = snapshot.docs.sort((a, b) => {
+                    const timeA = a.data().createdAt?.toDate?.() || new Date(0);
+                    const timeB = b.data().createdAt?.toDate?.() || new Date(0);
+                    return timeB - timeA;
+                });
+
+                tbody.innerHTML = sortedDocs.map(doc => {
+                    const data = doc.data();
+                    const statusText = {
+                        'draft': '임시저장',
+                        'pending': '결재대기',
+                        'reviewing': '검토중',
+                        'approved': '승인',
+                        'rejected': '반려'
+                    }[data.status] || data.status;
+
+                    const statusClass = {
+                        'draft': 'badge-secondary',
+                        'pending': 'badge-warning',
+                        'reviewing': 'badge-info',
+                        'approved': 'badge-success',
+                        'rejected': 'badge-danger'
+                    }[data.status] || 'badge-secondary';
+
+                    return `
+                        <tr>
+                            <td>${data.suggestionNumber || '-'}</td>
+                            <td>${data.proposer || '-'}</td>
+                            <td>${data.department || '-'}</td>
+                            <td>${data.title || '-'}</td>
+                            <td>
+                                <span class="badge ${statusClass}">
+                                    ${statusText}
+                                </span>
+                            </td>
+                            <td>${formatDate(data.createdAt)}</td>
+                            <td>
+                                <button class="btn btn-secondary btn-sm" onclick="viewSuggestion('${doc.id}')">
+                                    상세보기
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+
+            } catch (error) {
+                console.error('전체 제안 목록 로드 오류:', error);
+                const tbody = document.getElementById('allSuggestionsList');
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="7" style="text-align: center; padding: 40px; color: #dc3545;">
+                            전체 제안을 불러오는데 실패했습니다: ${error.message}
+                        </td>
+                    </tr>
+                `;
+            }
+        }
+
+        // 통계 로드
+        async function loadStats() {
+            try {
+                const snapshot = await db.collection('suggestions')
+                    .where('effectVerification.verifierId', '==', currentVerifier.employeeId)
+                    .where('effectVerification.status', '==', 'completed')
+                    .get();
+
+                const total = snapshot.size;
+                let totalAmount = 0;
+                let totalAdjustRate = 0;
+                let totalProcessTime = 0;
+
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    const verification = data.effectVerification;
+
+                    totalAmount += verification.verifiedAmount || 0;
+
+                    if (verification.originalAmount > 0) {
+                        totalAdjustRate += (verification.verifiedAmount / verification.originalAmount) * 100;
+                    }
+
+                    // 처리 시간 계산 (제출일 ~ 검증일)
+                    if (data.createdAt && verification.verifiedAt) {
+                        const submitDate = data.createdAt.toDate();
+                        const verifyDate = verification.verifiedAt.toDate();
+                        const diffDays = Math.floor((verifyDate - submitDate) / (1000 * 60 * 60 * 24));
+                        totalProcessTime += diffDays;
+                    }
+                });
+
+                document.getElementById('statsTotal').textContent = total;
+                document.getElementById('statsAvgAmount').textContent =
+                    total > 0 ? formatNumber(Math.round(totalAmount / total)) + '원' : '0원';
+                document.getElementById('statsAvgAdjustRate').textContent =
+                    total > 0 ? Math.round(totalAdjustRate / total) + '%' : '100%';
+                document.getElementById('statsAvgTime').textContent =
+                    total > 0 ? Math.round(totalProcessTime / total) + '일' : '0일';
+
+            } catch (error) {
+                console.error('통계 로드 오류:', error);
+            }
+        }
+
+        // 검증 모달 열기
+        async function openVerifyModal(suggestionId) {
+            try {
+                const doc = await db.collection('suggestions').doc(suggestionId).get();
+                if (!doc.exists) {
+                    showToast('제안서를 찾을 수 없습니다.', 'error');
+                    return;
+                }
+
+                const data = doc.data();
+                currentSuggestion = { id: suggestionId, ...data };
+
+                // 모달에 데이터 채우기
+                document.getElementById('modalSugNumber').textContent = data.suggestionNumber;
+                document.getElementById('modalProposer').textContent = `${data.proposer} (${data.department})`;
+                document.getElementById('modalDepartment').textContent = data.department;
+                document.getElementById('modalSubmitDate').textContent = formatDate(data.createdAt);
+                document.getElementById('modalTitle').textContent = data.title;
+                document.getElementById('modalCurrentSituation').textContent = data.currentSituation;
+                document.getElementById('modalImprovementPlan').textContent = data.improvementPlan;
+                document.getElementById('modalExpectedSaving').textContent = formatNumber(data.expectedSaving);
+                document.getElementById('modalSavingBasis').textContent = data.savingBasis || '(산출 근거 없음)';
+
+                // 입력 필드 초기화
+                document.getElementById('verifiedAmount').value = '';
+                document.getElementById('adjustmentReason').value = '';
+                document.getElementById('verificationNote').value = '';
+                document.getElementById('effectScoreDisplay').style.display = 'none';
+
+                // AI 분석 결과 초기화
+                document.getElementById('aiAnalysisResult').style.display = 'none';
+                document.getElementById('aiAnalysisContent').textContent = '';
+
+                // 모달 표시
+                document.getElementById('verifyModal').classList.add('show');
+
+            } catch (error) {
+                console.error('모달 열기 오류:', error);
+                showToast('제안서를 불러오는데 실패했습니다.', 'error');
+            }
+        }
+
+        // 검증 모달 닫기
+        function closeVerifyModal() {
+            document.getElementById('verifyModal').classList.remove('show');
+            currentSuggestion = null;
+
+            // AI 분석 결과 초기화
+            document.getElementById('aiAnalysisResult').style.display = 'none';
+            document.getElementById('aiAnalysisContent').textContent = '';
+
+            // 입력 필드 초기화
+            document.getElementById('verifiedAmount').value = '';
+            document.getElementById('adjustmentReason').value = '';
+            document.getElementById('verificationNote').value = '';
+            document.getElementById('effectScoreDisplay').style.display = 'none';
+        }
+
+        // 유형효과 점수 자동 계산
+        function calculateEffectScore() {
+            const amount = parseInt(document.getElementById('verifiedAmount').value) || 0;
+
+            if (amount === 0) {
+                document.getElementById('effectScoreDisplay').style.display = 'none';
+                return;
+            }
+
+            let score = 0;
+            for (let range of effectScoreRanges) {
+                if (amount >= range.min && amount <= range.max) {
+                    score = range.score;
+                    break;
+                }
+            }
+
+            document.getElementById('effectScoreValue').textContent = score;
+            document.getElementById('effectScoreDisplay').style.display = 'block';
+        }
+
+        // 검증 완료 처리
+        async function completeVerification() {
+            const verifiedAmount = parseInt(document.getElementById('verifiedAmount').value);
+            const adjustmentReason = document.getElementById('adjustmentReason').value;
+            const verificationNote = document.getElementById('verificationNote').value;
+
+            if (!verifiedAmount && verifiedAmount !== 0) {
+                showToast('확정 금액을 입력해주세요.', 'error');
+                return;
+            }
+
+            // 예상 금액과 다를 경우 조정 사유 필수
+            const originalAmount = currentSuggestion.expectedSaving || 0;
+            if (Math.abs(verifiedAmount - originalAmount) > originalAmount * 0.1 && !adjustmentReason) {
+                showToast('금액 조정 사유를 입력해주세요. (예상 금액과 10% 이상 차이)', 'error');
+                return;
+            }
+
+            if (!confirm('검증을 완료하시겠습니까? 완료 후 제안서는 평가 단계로 진행됩니다.')) return;
+
+            try {
+                // 유형효과 점수 계산
+                let effectScore = 0;
+                for (let range of effectScoreRanges) {
+                    if (verifiedAmount >= range.min && verifiedAmount <= range.max) {
+                        effectScore = range.score;
+                        break;
+                    }
+                }
+
+                const verification = {
+                    needsVerification: true,
+                    status: 'completed',
+                    originalAmount: originalAmount,
+                    verifiedAmount: verifiedAmount,
+                    typicalEffectScore: effectScore,
+                    verificationNote: verificationNote,
+                    adjustmentReason: adjustmentReason,
+                    verifierId: currentVerifier.employeeId,
+                    verifierName: currentVerifier.displayName,
+                    verifiedAt: firebase.firestore.FieldValue.serverTimestamp()
+                };
+
+                // 결재선에서 첫 번째 평가자(소위원회) 조회
+                const approvalLineDoc = await db.collection('approvalLines')
+                    .doc(currentSuggestion.approvalLineId).get();
+
+                if (!approvalLineDoc.exists) {
+                    throw new Error('결재선 정보를 찾을 수 없습니다.');
+                }
+
+                const approvers = approvalLineDoc.data().approvers || [];
+                const firstApprover = approvers.find(a => a.level === 1);
+
+                if (!firstApprover) {
+                    throw new Error('첫 번째 평가자(소위원회)를 찾을 수 없습니다.');
+                }
+
+                // 검증 완료 후 소위원회(1단계)로 전달
+                await db.collection('suggestions').doc(currentSuggestion.id).update({
+                    effectVerification: verification,
+                    currentApproverId: firstApprover.id,
+                    stage: 1,
+                    status: 'pending',
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+
+                // 알림 생성
+                await db.collection('notifications').add({
+                    userId: currentSuggestion.userId,
+                    title: '유형효과 검증 완료',
+                    message: `${currentSuggestion.suggestionNumber} 제안서의 유형효과 검증이 완료되었습니다. 확정 금액: ${formatNumber(verifiedAmount)}원/년`,
+                    type: 'verification',
+                    read: false,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+
+                showToast('검증이 완료되었습니다. 평가 단계로 전달됩니다.', 'success');
+                closeVerifyModal();
+
+                // 데이터 새로고침
+                loadDashboard();
+                loadPendingVerifications();
+                loadCompletedVerifications();
+                loadStats();
+
+            } catch (error) {
+                console.error('검증 완료 오류:', error);
+                showToast('처리 중 오류가 발생했습니다: ' + error.message, 'error');
+            }
+        }
+
+        // 검증 불가 처리
+        async function rejectVerification() {
+            const reason = document.getElementById('adjustmentReason').value;
+
+            if (!reason) {
+                showToast('검증 불가 사유를 반드시 입력해주세요.', 'error');
+                return;
+            }
+
+            if (!confirm('검증 불가 처리하시겠습니까? 제안서는 제안자에게 반려됩니다.')) return;
+
+            try {
+                const verification = {
+                    needsVerification: true,
+                    status: 'rejected',
+                    originalAmount: currentSuggestion.expectedSaving || 0,
+                    verifiedAmount: 0,
+                    typicalEffectScore: 0,
+                    verificationNote: reason,
+                    verifierId: currentVerifier.employeeId,
+                    verifierName: currentVerifier.displayName,
+                    verifiedAt: firebase.firestore.FieldValue.serverTimestamp()
+                };
+
+                await db.collection('suggestions').doc(currentSuggestion.id).update({
+                    effectVerification: verification,
+                    status: 'rejected',
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+
+                // 알림 생성
+                await db.collection('notifications').add({
+                    userId: currentSuggestion.userId,
+                    title: '유형효과 검증 불가',
+                    message: `${currentSuggestion.suggestionNumber} 제안서가 검증 불가 처리되었습니다. 사유: ${reason}`,
+                    type: 'verification',
+                    read: false,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+
+                showToast('검증 불가 처리되었습니다.', 'success');
+                closeVerifyModal();
+
+                // 데이터 새로고침
+                loadDashboard();
+                loadPendingVerifications();
+
+            } catch (error) {
+                console.error('검증 불가 처리 오류:', error);
+                showToast('처리 중 오류가 발생했습니다.', 'error');
+            }
+        }
+
+        // 추가 자료 요청
+        async function requestMoreInfo() {
+            const reason = document.getElementById('verificationNote').value;
+
+            if (!reason) {
+                showToast('추가 자료 요청 사항을 입력해주세요.', 'error');
+                return;
+            }
+
+            if (!confirm('추가 자료를 요청하시겠습니까?')) return;
+
+            try {
+                // 알림 생성
+                await db.collection('notifications').add({
+                    userId: currentSuggestion.userId,
+                    title: '유형효과 검증 - 추가 자료 요청',
+                    message: `${currentSuggestion.suggestionNumber}: ${reason}`,
+                    type: 'verification',
+                    read: false,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+
+                showToast('추가 자료 요청이 전송되었습니다.', 'success');
+                closeVerifyModal();
+
+            } catch (error) {
+                console.error('추가 자료 요청 오류:', error);
+                showToast('처리 중 오류가 발생했습니다.', 'error');
+            }
+        }
+
+        // 검증 내역 상세보기
+        async function viewVerification(suggestionId) {
+            await openVerifyModal(suggestionId);
+
+            // 기존 검증 데이터 로드
+            const doc = await db.collection('suggestions').doc(suggestionId).get();
+            const data = doc.data();
+
+            if (data.effectVerification) {
+                document.getElementById('verifiedAmount').value = data.effectVerification.verifiedAmount || '';
+                document.getElementById('adjustmentReason').value = data.effectVerification.adjustmentReason || '';
+                document.getElementById('verificationNote').value = data.effectVerification.verificationNote || '';
+
+                if (data.effectVerification.verifiedAmount) {
+                    calculateEffectScore();
+                }
+            }
+
+            // 관리자 권한 확인
+            const isAdmin = currentVerifier.roles && currentVerifier.roles.includes('admin');
+
+            if (isAdmin) {
+                // 관리자는 수정 가능
+                document.getElementById('verifiedAmount').disabled = false;
+                document.getElementById('adjustmentReason').disabled = false;
+                document.getElementById('verificationNote').disabled = false;
+                document.querySelector('.modal-footer').innerHTML = `
+                    <button class="btn btn-secondary" onclick="closeVerifyModal()">닫기</button>
+                    <button class="btn btn-success" onclick="updateVerification('${suggestionId}')">수정 저장</button>
+                `;
+            } else {
+                // 일반 검증자는 읽기만 가능
+                document.getElementById('verifiedAmount').disabled = true;
+                document.getElementById('adjustmentReason').disabled = true;
+                document.getElementById('verificationNote').disabled = true;
+                document.querySelector('.modal-footer').innerHTML = `
+                    <button class="btn btn-secondary" onclick="closeVerifyModal()">닫기</button>
+                `;
+            }
+        }
+
+        // 검증 정보 수정 (관리자 전용)
+        async function updateVerification(suggestionId) {
+            const verifiedAmount = parseInt(document.getElementById('verifiedAmount').value);
+            const adjustmentReason = document.getElementById('adjustmentReason').value;
+            const verificationNote = document.getElementById('verificationNote').value;
+
+            if (!verifiedAmount && verifiedAmount !== 0) {
+                showToast('확정 금액을 입력해주세요.', 'error');
+                return;
+            }
+
+            if (!confirm('검증 정보를 수정하시겠습니까?')) return;
+
+            try {
+                // 유형효과 점수 재계산
+                let effectScore = 0;
+                for (let range of effectScoreRanges) {
+                    if (verifiedAmount >= range.min && verifiedAmount <= range.max) {
+                        effectScore = range.score;
+                        break;
+                    }
+                }
+
+                const doc = await db.collection('suggestions').doc(suggestionId).get();
+                const existingVerification = doc.data().effectVerification || {};
+
+                const updatedVerification = {
+                    ...existingVerification,
+                    verifiedAmount: verifiedAmount,
+                    typicalEffectScore: effectScore,
+                    adjustmentReason: adjustmentReason,
+                    verificationNote: verificationNote,
+                    lastModifiedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    lastModifiedBy: currentVerifier.displayName
+                };
+
+                await db.collection('suggestions').doc(suggestionId).update({
+                    effectVerification: updatedVerification,
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+
+                showToast('검증 정보가 수정되었습니다.', 'success');
+                closeVerifyModal();
+
+                // 데이터 새로고침
+                loadDashboard();
+                loadCompletedVerifications();
+
+            } catch (error) {
+                console.error('검증 정보 수정 오류:', error);
+                showToast('수정 중 오류가 발생했습니다: ' + error.message, 'error');
+            }
+        }
+
+        // 유틸리티 함수
+        function formatDate(timestamp) {
+            if (!timestamp) return '-';
+            const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+            return date.toLocaleDateString('ko-KR');
+        }
+
+        function formatNumber(num) {
+            if (!num && num !== 0) return '0';
+            return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+        }
+
+        function calculateWaitDays(timestamp) {
+            if (!timestamp) return 0;
+            const submitDate = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+            const today = new Date();
+            return Math.floor((today - submitDate) / (1000 * 60 * 60 * 24));
+        }
+
+        function showSection(sectionId) {
+            document.querySelectorAll('.content-section').forEach(section => {
+                section.classList.remove('active');
+            });
+            document.getElementById(sectionId).classList.add('active');
+
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            event.target.classList.add('active');
+
+            // 섹션별 데이터 로드
+            if (sectionId === 'allSuggestions') {
+                loadAllSuggestions();
+            }
+        }
+
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = `toast ${type} show`;
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+
+        // 제안서 상세보기 (읽기 전용)
+        async function viewSuggestion(suggestionId) {
+
+            try {
+                // Firestore에서 제안서 조회
+                const doc = await db.collection('suggestions').doc(suggestionId).get();
+
+                if (!doc.exists) {
+                    showToast('제안서를 찾을 수 없습니다.', 'error');
+                    return;
+                }
+
+                const s = { id: doc.id, ...doc.data() };
+
+                const detailHtml = `
+                    <div style="padding: 20px;">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+                            <div>
+                                <strong>제안번호:</strong> ${s.suggestionNumber || s.id.substring(0, 8)}<br>
+                                <strong>제안자:</strong> ${s.proposer}<br>
+                                <strong>제안부서:</strong> ${s.department}<br>
+                                <strong>접수일:</strong> ${formatDate(s.createdAt)}
+                            </div>
+                            <div>
+                                <strong>카테고리:</strong> ${s.category || '-'}<br>
+                                <strong>우선순위:</strong> ${s.priority || '-'}<br>
+                                <strong>실시자:</strong> ${s.implementor || '-'}<br>
+                                <strong>실시부서:</strong> ${s.implementDept || '-'}
+                            </div>
+                        </div>
+
+                        <div style="margin-bottom: 20px;">
+                            <h4 style="margin-bottom: 10px;">제안 내용</h4>
+                            <div style="background: #f8f9fa; padding: 15px; border-radius: 8px;">${s.title}</div>
+                        </div>
+
+                        <div style="margin-bottom: 20px;">
+                            <h4 style="margin-bottom: 10px;">기존실시내용</h4>
+                            <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; white-space: pre-wrap;">${s.currentSituation || '-'}</div>
+                        </div>
+
+                        <div style="margin-bottom: 20px;">
+                            <h4 style="margin-bottom: 10px;">변경(신규)내용</h4>
+                            <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; white-space: pre-wrap;">${s.improvementPlan || '-'}</div>
+                        </div>
+
+                        ${s.hasTypicalEffect ? `
+                            <div style="margin-bottom: 20px;">
+                                <h4 style="margin-bottom: 10px;">유형효과</h4>
+                                <div style="background: #fff3cd; padding: 15px; border-radius: 8px;">
+                                    <div><strong>예상 절감액:</strong> ${formatNumber(s.expectedSaving)}원/년</div>
+                                    ${s.effectVerification && s.effectVerification.verifiedAmount ?
+                                        `<div><strong>확정 금액:</strong> ${formatNumber(s.effectVerification.verifiedAmount)}원/년</div>
+                                         <div><strong>검증자:</strong> ${s.effectVerification.verifierName || '-'}</div>
+                                         <div><strong>검증일:</strong> ${formatDate(s.effectVerification.verifiedAt)}</div>`
+                                        : ''}
+                                </div>
+                            </div>
+                        ` : ''}
+
+                        <div style="margin-bottom: 20px;">
+                            <h4 style="margin-bottom: 10px;">자체평가</h4>
+                            <div style="background: #f8f9fa; padding: 15px; border-radius: 8px;">
+                                <div><strong>노력도:</strong> ${s.scores?.self?.effort || 0}점</div>
+                                <div><strong>창의성:</strong> ${s.scores?.self?.creativity || 0}점</div>
+                                <div><strong>유무형효과:</strong> ${s.scores?.self?.effect || 0}점</div>
+                                <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #dee2e6;">
+                                    <strong>총점:</strong> ${s.scores?.self?.total || 0}점
+                                    <strong style="margin-left: 20px;">등급:</strong> ${s.scores?.self?.grade || '-'}
+                                </div>
+                            </div>
+                        </div>
+
+                        ${s.contributors && s.contributors.length > 0 ? `
+                            <div style="margin-bottom: 20px;">
+                                <h4 style="margin-bottom: 10px;">참여자 기여도</h4>
+                                <table class="table">
+                                    <thead>
+                                        <tr>
+                                            <th>이름</th>
+                                            <th>역할</th>
+                                            <th>기여도</th>
+                                            <th>부서</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${s.contributors.map(c => `
+                                            <tr>
+                                                <td>${c.name}</td>
+                                                <td>${c.role}</td>
+                                                <td>${c.pct}%</td>
+                                                <td>${c.department}</td>
+                                            </tr>
+                                        `).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+
+                document.getElementById('detailContent').innerHTML = detailHtml;
+                document.getElementById('detailModal').classList.add('show');
+
+            } catch (error) {
+                console.error('상세보기 오류:', error);
+                showToast('제안서를 불러오는데 실패했습니다.', 'error');
+            }
+        }
+
+        // 상세보기 모달 닫기
+        function closeDetailModal() {
+            document.getElementById('detailModal').classList.remove('show');
+        }
+
+        function logout() {
+            if (confirm('로그아웃 하시겠습니까?')) {
+                auth.signOut().then(() => {
+                    window.location.href = 'index.html';
+                }).catch(error => {
+                    console.error('로그아웃 오류:', error);
+                    showToast('로그아웃 중 오류가 발생했습니다.', 'error');
+                });
+            }
+        }
+
+        // AI 분석 요청 (Netlify Function 사용)
+        async function requestAIAnalysis() {
+            if (!currentSuggestion) {
+                showToast('제안서 정보를 불러오지 못했습니다.', 'error');
+                return;
+            }
+
+            const btn = document.getElementById('aiRequestBtn');
+            const originalText = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '🤖 AI 분석 중...';
+
+            try {
+                // Netlify Function 호출
+                const response = await fetch('/.netlify/functions/openai-analyze', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        suggestionData: {
+                            title: currentSuggestion.title,
+                            proposer: currentSuggestion.proposer,
+                            department: currentSuggestion.department,
+                            currentSituation: currentSuggestion.currentSituation,
+                            improvementPlan: currentSuggestion.improvementPlan,
+                            expectedSaving: formatNumber(currentSuggestion.expectedSaving),
+                            savingBasis: currentSuggestion.savingBasis || '제공되지 않음'
+                        }
+                    })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'API 요청 실패');
+                }
+
+                const data = await response.json();
+
+                if (!data.success) {
+                    throw new Error(data.error || 'AI 분석 실패');
+                }
+
+                // AI 응답 표시
+                document.getElementById('aiAnalysisContent').textContent = data.analysis;
+                document.getElementById('aiAnalysisResult').style.display = 'block';
+
+                showToast('AI 분석이 완료되었습니다.', 'success');
+
+            } catch (error) {
+                console.error('AI 분석 오류:', error);
+                showToast('AI 분석 중 오류가 발생했습니다: ' + error.message, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            }
+        }
+
+        // AI 분석 결과 닫기
+        function closeAIAnalysis() {
+            document.getElementById('aiAnalysisResult').style.display = 'none';
+        }
+
+        // 기본 AI 프롬프트 템플릿
+        function getDefaultPrompt() {
+            return `[역할]
+너는 제약회사 제안제도 '유형효과 금액 검증 담당자'로서 제안자의 절감액 산정의 타당성을 엄격히 평가한다.
+
+[입력 정보]
+- 제안 제목: {title}
+- 제안자: {proposer} ({department})
+- 기존 내용: {currentSituation}
+- 개선 내용: {improvementPlan}
+- 예상 절감액: {expectedSaving}원/년
+- 산출 근거: {savingBasis}
+
+[평가 기준]
+1) 제안자가 사용한 가정(물량·단가·효율·적용범위·기간)이 현실적이고 검증 가능한지 점검한다.
+2) 절감 구조(절감항목 → 단가 → 물량 → 적용기간)의 논리 연결성을 확인한다.
+3) 정보 부족·추정치 과다·100% 적용 가정·추가비용 누락 등이 있는지 검토한다.
+4) 불명확한 부분이 있으면 "추가 확인 필요"로 분류한다.
+
+[출력 형식]
+
+① 예상 절감액 타당성
+- 제시 금액: {expectedSaving}원/년
+- 핵심 가정 요약
+- 가정의 현실성: (현실적 / 다소 과대 / 과대 / 판단 곤란)
+- 절감 구조의 논리성 평가
+
+② 금액 산정 시 필수 확인 요소
+- 절감 대상 항목의 타당성
+- 물량 가정 적합성(실적·평균과의 차이)
+- 단가 근거의 신뢰성
+- 적용범위(전체/일부) 및 적용률 검증
+- 1년 환산의 적정성(지속효과인지·일시효과인지)
+- 추가비용(설비·시험·인력 등) 발생 여부
+
+③ 적정 확정 금액(범위 제안)
+- 제안 대비 평가:
+  [ ] 적정  [ ] 다소 과대  [ ] 과대  [ ] 근거 부족
+- 적정 범위: "약 ○○만원~○○만원/년"
+- 조정 비율 제안: "제안액의 약 ○○% 수준이 적절"
+
+④ 기준 부합도(5점 척도)
+- 근거 명확성: ○/5
+- 가정 현실성: ○/5
+- 원가 구조 반영: ○/5
+- 적용범위·기간 타당성: ○/5
+- 추가비용 반영: ○/5
+- 총평: 제안이 회사 기준에 (잘 부합 / 부분 부합 / 낮은 부합)
+
+⑤ 추가 확인 필요 항목
+- 필요 데이터 또는 증빙(물량·단가·적용범위·추가비용 등)
+
+⑥ 최종 결론
+- "본 제안의 절감액 {expectedSaving}원/년은 [평가 결과]이며, 확정 금액은 '약 ○○만원/년' 수준이 적절함."
+- 필요 시 "추가 확인 후 확정 요망" 명시`;
+        }
+
+        // 저장된 프롬프트 가져오기
+        function getSavedPrompt() {
+            return localStorage.getItem('aiPromptTemplate') || getDefaultPrompt();
+        }
+
+        // 프롬프트 편집 모달 열기
+        function openPromptEditor() {
+            const modal = document.getElementById('promptEditorModal');
+            const textarea = document.getElementById('promptTemplate');
+            textarea.value = getSavedPrompt();
+            modal.style.display = 'flex';
+        }
+
+        // 프롬프트 편집 모달 닫기
+        function closePromptEditor() {
+            document.getElementById('promptEditorModal').style.display = 'none';
+        }
+
+        // 프롬프트 기본값 복원
+        function resetPrompt() {
+            if (confirm('프롬프트를 기본값으로 복원하시겠습니까?')) {
+                document.getElementById('promptTemplate').value = getDefaultPrompt();
+            }
+        }
+
+        // 프롬프트 저장 및 AI 분석 요청
+        async function saveAndRequestAI() {
+            const promptTemplate = document.getElementById('promptTemplate').value;
+
+            if (!promptTemplate.trim()) {
+                showToast('프롬프트를 입력해주세요.', 'error');
+                return;
+            }
+
+            // localStorage에 저장
+            localStorage.setItem('aiPromptTemplate', promptTemplate);
+            closePromptEditor();
+
+            // AI 분석 요청
+            await requestAIAnalysisWithPrompt(promptTemplate);
+        }
+
+        // 커스텀 프롬프트로 AI 분석 요청
+        async function requestAIAnalysisWithPrompt(promptTemplate) {
+            if (!currentSuggestion) {
+                showToast('제안서 정보를 불러오지 못했습니다.', 'error');
+                return;
+            }
+
+            const btn = document.getElementById('aiRequestBtn');
+            const originalText = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '🤖 AI 분석 중...';
+
+            try {
+
+                // 프롬프트의 플레이스홀더를 실제 값으로 치환 (안전하게 처리)
+                const customPrompt = promptTemplate
+                    .replace(/{title}/g, currentSuggestion.title || '제목 없음')
+                    .replace(/{proposer}/g, currentSuggestion.proposer || '제안자 정보 없음')
+                    .replace(/{department}/g, currentSuggestion.department || '부서 정보 없음')
+                    .replace(/{currentSituation}/g, currentSuggestion.currentSituation || '기존 내용 없음')
+                    .replace(/{improvementPlan}/g, currentSuggestion.improvementPlan || '개선 내용 없음')
+                    .replace(/{expectedSaving}/g, currentSuggestion.expectedSaving ? formatNumber(currentSuggestion.expectedSaving) : '0')
+                    .replace(/{savingBasis}/g, currentSuggestion.savingBasis || '산출 근거 제공되지 않음');
+
+
+                // Netlify Function 호출
+                const response = await fetch('/.netlify/functions/openai-analyze', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        customPrompt: customPrompt
+                    })
+                });
+
+                // 응답 텍스트를 먼저 가져오기
+                const responseText = await response.text();
+
+                // 빈 응답 체크
+                if (!responseText || responseText.trim() === '') {
+                    throw new Error('API 서버로부터 응답을 받지 못했습니다. Netlify Functions가 배포되었는지 확인해주세요.');
+                }
+
+                // JSON 파싱 시도
+                let data;
+                try {
+                    data = JSON.parse(responseText);
+                } catch (parseError) {
+                    console.error('JSON 파싱 오류:', parseError);
+                    console.error('응답 내용:', responseText);
+                    throw new Error('서버 응답을 처리할 수 없습니다. 응답: ' + responseText.substring(0, 100));
+                }
+
+                // HTTP 에러 체크
+                if (!response.ok) {
+                    throw new Error(data.error || `API 요청 실패 (상태 코드: ${response.status})`);
+                }
+
+                // AI 분석 결과 체크
+                if (!data.success) {
+                    throw new Error(data.error || 'AI 분석 실패');
+                }
+
+                if (!data.analysis) {
+                    throw new Error('AI 분석 결과가 비어있습니다.');
+                }
+
+                // AI 응답 표시
+                document.getElementById('aiAnalysisContent').textContent = data.analysis;
+                document.getElementById('aiAnalysisResult').style.display = 'block';
+
+                showToast('AI 분석이 완료되었습니다.', 'success');
+
+            } catch (error) {
+                console.error('AI 분석 오류:', error);
+                showToast('AI 분석 오류: ' + error.message, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            }
+        }
+    </script>
+
+    <!-- 프롬프트 편집 모달 -->
+    <div id="promptEditorModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 3000; align-items: center; justify-content: center;">
+        <div style="background: white; border-radius: 12px; padding: 30px; max-width: 900px; width: 90%; max-height: 90vh; overflow-y: auto;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h3 style="color: #667eea; margin: 0;">✏️ AI 프롬프트 편집</h3>
+                <button onclick="closePromptEditor()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #999;">&times;</button>
+            </div>
+
+            <div style="background: #fff3cd; padding: 15px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #ffc107;">
+                <strong>📌 사용 가능한 변수:</strong>
+                <div style="margin-top: 10px; font-family: monospace; font-size: 13px; color: #666;">
+                    <div>{title} - 제안 제목</div>
+                    <div>{proposer} - 제안자 이름</div>
+                    <div>{department} - 부서명</div>
+                    <div>{currentSituation} - 기존 실시 내용</div>
+                    <div>{improvementPlan} - 변경(신규) 내용</div>
+                    <div>{expectedSaving} - 예상 절감액</div>
+                    <div>{savingBasis} - 산출 근거</div>
+                </div>
+            </div>
+
+            <div style="margin-bottom: 20px;">
+                <label style="display: block; margin-bottom: 10px; font-weight: 600; color: #333;">프롬프트 템플릿</label>
+                <textarea id="promptTemplate" style="width: 100%; min-height: 400px; padding: 15px; border: 1px solid #ddd; border-radius: 8px; font-family: 'Courier New', monospace; font-size: 13px; line-height: 1.6; resize: vertical;"></textarea>
+            </div>
+
+            <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                <button onclick="resetPrompt()" style="padding: 10px 20px; background: #6c757d; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">
+                    🔄 기본값 복원
+                </button>
+                <button onclick="closePromptEditor()" style="padding: 10px 20px; background: #e9ecef; color: #333; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">
+                    취소
+                </button>
+                <button onclick="saveAndRequestAI()" style="padding: 10px 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">
+                    💾 저장하고 AI 분석 요청
+                </button>
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>

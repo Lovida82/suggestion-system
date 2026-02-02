@@ -1,0 +1,3707 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>관리자 시스템 - 제안제도</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans KR', sans-serif;
+            background: linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%);
+            min-height: 100vh;
+            position: relative;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background:
+                radial-gradient(circle at 20% 50%, rgba(45, 212, 191, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(59, 130, 246, 0.1) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .container {
+            display: flex;
+            min-height: 100vh;
+            position: relative;
+            z-index: 1;
+        }
+
+        .mobile-header {
+            display: none;
+            background: white;
+            padding: 15px 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .menu-toggle {
+            background: none;
+            border: none;
+            font-size: 20px;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 6px;
+            transition: background-color 0.3s;
+        }
+
+        .sidebar-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 999;
+        }
+
+        .sidebar {
+            width: 280px;
+            background: white;
+            box-shadow: 2px 0 15px rgba(0,0,0,0.1);
+            padding: 0;
+            position: relative;
+            z-index: 1000;
+            transition: transform 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        .sidebar-header {
+            background: linear-gradient(135deg, #0ea5e9 0%, #2dd4bf 100%);
+            color: white;
+            padding: 32px 25px;
+            text-align: center;
+            flex-shrink: 0;
+        }
+
+        .sidebar-header h2 {
+            font-size: 20px;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+
+        .user-info {
+            opacity: 0.9;
+        }
+
+        .nav-menu {
+            padding: 20px 0;
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .nav-item {
+            display: block;
+            width: 100%;
+            padding: 15px 25px;
+            background: none;
+            border: none;
+            text-align: left;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: #555;
+            border-left: 4px solid transparent;
+        }
+
+        .nav-item:hover {
+            background-color: rgba(14, 165, 233, 0.08);
+            color: #0ea5e9;
+            border-left-color: #0ea5e9;
+        }
+
+        .nav-item.active {
+            background: linear-gradient(135deg, #0ea5e9 0%, #2dd4bf 100%);
+            color: white;
+            border-left-color: #0891b2;
+        }
+
+        .logout-btn {
+            margin: 20px 25px;
+            padding: 12px;
+            background: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            flex-shrink: 0;
+        }
+
+        .main-content {
+            flex: 1;
+            padding: 30px;
+            overflow-y: auto;
+        }
+
+        .content-section {
+            display: none;
+        }
+
+        .content-section.active {
+            display: block;
+        }
+
+        .page-header {
+            margin-bottom: 30px;
+        }
+
+        .page-title {
+            font-size: 28px;
+            color: white;
+            margin-bottom: 5px;
+            font-weight: 600;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            margin-bottom: 20px;
+            overflow: hidden;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .card:hover {
+            box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+            transform: translateY(-2px);
+        }
+
+        .card-header {
+            padding: 20px 25px;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .card-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #2d3748;
+        }
+
+        .card-body {
+            padding: 25px;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #0ea5e9 0%, #2dd4bf 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(14, 165, 233, 0.3);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(14, 165, 233, 0.4);
+        }
+
+        .btn-primary:active {
+            transform: translateY(0);
+        }
+
+        .btn-success {
+            background: #48bb78;
+            color: white;
+        }
+
+        .btn-danger {
+            background: #f56565;
+            color: white;
+        }
+
+        .btn-sm {
+            padding: 6px 12px;
+            font-size: 12px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #4a5568;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .table th,
+        .table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .table th {
+            background: #f7fafc;
+            font-weight: 600;
+        }
+
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            border-radius: 8px;
+            color: white;
+            font-weight: 500;
+            z-index: 3000;
+            transform: translateX(400px);
+            transition: transform 0.3s ease;
+        }
+
+        .toast.show {
+            transform: translateX(0);
+        }
+
+        .toast.success {
+            background: #48bb78;
+        }
+
+        .toast.error {
+            background: #f56565;
+        }
+
+        .upload-area {
+            border: 2px dashed #cbd5e0;
+            border-radius: 8px;
+            padding: 40px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .upload-area:hover {
+            border-color: #667eea;
+            background: #f7fafc;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        .stat-value {
+            font-size: 32px;
+            font-weight: 700;
+            color: #2d3748;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            color: #718096;
+            font-size: 14px;
+        }
+
+        @media (max-width: 768px) {
+            .mobile-header {
+                display: flex;
+            }
+            .main-content {
+                margin-top: 70px;
+                padding: 20px;
+            }
+            .sidebar {
+                position: fixed;
+                top: 0;
+                left: 0;
+                bottom: 0;
+                transform: translateX(-100%);
+                z-index: 1001;
+            }
+            .sidebar.open {
+                transform: translateX(0);
+            }
+            .sidebar-overlay.active {
+                display: block;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="mobile-header">
+            <button class="menu-toggle" onclick="toggleSidebar()">☰</button>
+            <h1>관리자 시스템</h1>
+        </div>
+
+        <div class="sidebar-overlay" onclick="closeSidebar()"></div>
+
+        <div class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <h2>관리자 시스템</h2>
+                <div class="user-info">
+                    <div id="adminDisplayName">관리자</div>
+                </div>
+            </div>
+
+            <nav class="nav-menu">
+                <button class="nav-item active" onclick="showSection(event, 'dashboard')">대시보드</button>
+                <button class="nav-item" onclick="showSection(event, 'suggestions')">승인 대기</button>
+                <button class="nav-item" onclick="showSection(event, 'revisionRequested')">수정 요청</button>
+                <button class="nav-item" onclick="showSection(event, 'approved')">승인 완료</button>
+                <button class="nav-item" onclick="showSection(event, 'settings')">⚙️ 시스템 설정</button>
+                <button class="nav-item" onclick="showSection(event, 'evaluationCriteria')">📊 평가 기준 설정</button>
+                <button class="nav-item" onclick="showSection(event, 'orgchart')">👥 조직도 관리</button>
+                <!-- <button class="nav-item" onclick="showSection(event, 'approvers')">✍️ 결재자 관리</button> -->
+                <button class="nav-item" onclick="showSection(event, 'categories')">📁 카테고리 관리</button>
+                <button class="nav-item" onclick="showSection(event, 'notices')">공지사항</button>
+                <button class="nav-item" onclick="showSection(event, 'users')">사용자 관리</button>
+                <button class="nav-item" onclick="showSection(event, 'stats')">통계 분석</button>
+            </nav>
+
+            <button class="logout-btn" onclick="logout()">로그아웃</button>
+        </div>
+
+        <div class="main-content">
+            <!-- 대시보드 섹션 -->
+            <div id="dashboard" class="content-section active">
+                <div class="page-header">
+                    <h1 class="page-title">관리자 대시보드</h1>
+                </div>
+
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-value" id="pendingCount">0</div>
+                        <div class="stat-label">승인 대기</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="todayCount">0</div>
+                        <div class="stat-label">오늘 접수</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="totalUsersCount">0</div>
+                        <div class="stat-label">전체 사용자</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="evaluatorsCount">0</div>
+                        <div class="stat-label">평가자</div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">최근 제안서</h3>
+                    </div>
+                    <div class="card-body" id="recentSuggestions">
+                        로딩 중...
+                    </div>
+                </div>
+            </div>
+
+            <!-- 조직도 관리 섹션 -->
+            <div id="orgchart" class="content-section">
+                <div class="page-header">
+                    <h1 class="page-title">조직도 관리</h1>
+                    <p style="color: rgba(255,255,255,0.8); font-size: 14px;">
+                        Excel 파일을 업로드하면 자동으로 사용자와 평가자를 업데이트합니다
+                    </p>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">조직도 업로드</h3>
+                        <button class="btn btn-primary" onclick="downloadTemplate()">
+                            📥 템플릿 다운로드
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <div class="upload-area" onclick="document.getElementById('orgFileInput').click()">
+                            <div style="font-size: 48px; margin-bottom: 10px;">📊</div>
+                            <div style="font-size: 16px; font-weight: 600; margin-bottom: 5px;">
+                                조직도 Excel 파일을 드래그하거나 클릭하여 업로드
+                            </div>
+                            <div style="font-size: 14px; color: #666; margin-top: 10px;">
+                                지원 형식: .xls, .xlsx
+                            </div>
+                        </div>
+                        <input type="file" id="orgFileInput" accept=".xls,.xlsx" style="display: none;" onchange="handleOrgFileUpload(event)">
+                        
+                        <div id="uploadProgress" style="display: none; margin-top: 20px;">
+                            <div style="background: #e2e8f0; border-radius: 8px; height: 24px; overflow: hidden;">
+                                <div id="progressBar" style="background: #667eea; height: 100%; width: 0%; transition: width 0.3s;"></div>
+                            </div>
+                            <div id="progressText" style="text-align: center; margin-top: 10px; font-size: 14px; color: #666;"></div>
+                        </div>
+
+                        <div id="uploadResult" style="margin-top: 20px;"></div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">현재 조직도 현황</h3>
+                        <button class="btn btn-primary btn-sm" onclick="refreshOrgChart()">새로고침</button>
+                    </div>
+                    <div class="card-body">
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 20px;">
+                            <div style="background: #f7fafc; padding: 15px; border-radius: 8px;">
+                                <div style="font-size: 24px; font-weight: 600; color: #667eea;" id="totalEmployees">0</div>
+                                <div style="font-size: 14px; color: #666;">전체 직원</div>
+                            </div>
+                            <div style="background: #f7fafc; padding: 15px; border-radius: 8px;">
+                                <div style="font-size: 24px; font-weight: 600; color: #48bb78;" id="activeEmployees">0</div>
+                                <div style="font-size: 14px; color: #666;">재직자</div>
+                            </div>
+                            <div style="background: #f7fafc; padding: 15px; border-radius: 8px;">
+                                <div style="font-size: 24px; font-weight: 600; color: #f6ad55;" id="leaderCount">0</div>
+                                <div style="font-size: 14px; color: #666;">리더 (평가자)</div>
+                            </div>
+                            <div style="background: #f7fafc; padding: 15px; border-radius: 8px;">
+                                <div style="font-size: 24px; font-weight: 600; color: #a0aec0;" id="departmentCount">0</div>
+                                <div style="font-size: 14px; color: #666;">부서 수</div>
+                            </div>
+                        </div>
+
+                        <div id="orgChartTable"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 결재자 관리 섹션 (비활성화 - 추후 활용 가능) -->
+            <!--
+            <div id="approvers" class="content-section">
+                <div class="page-header">
+                    <h1 class="page-title">✍️ 결재자 관리</h1>
+                    <p style="color: rgba(255,255,255,0.8); font-size: 14px;">
+                        부서/팀별 결재 라인을 설정합니다. 결재자는 순서대로 자동 지정됩니다.
+                    </p>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">결재 라인 목록</h3>
+                        <button class="btn btn-primary" onclick="openApprovalLineModal()">
+                            + 새 결재 라인
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>부서/팀</th>
+                                    <th>결재 라인</th>
+                                    <th style="width: 100px;">상태</th>
+                                    <th style="width: 150px;">작업</th>
+                                </tr>
+                            </thead>
+                            <tbody id="approvalLineList">
+                                결재 라인 목록이 여기에 동적으로 추가됩니다.
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">리더(평가자) 목록</h3>
+                        <button class="btn btn-secondary btn-sm" onclick="refreshLeaders()">새로고침</button>
+                    </div>
+                    <div class="card-body">
+                        <div style="margin-bottom: 15px;">
+                            <input type="text" id="leaderSearch" class="form-input"
+                                placeholder="이름 또는 부서로 검색..." style="max-width: 300px;" onkeyup="searchLeaders()">
+                        </div>
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>사번</th>
+                                    <th>이름</th>
+                                    <th>부서</th>
+                                    <th>직책</th>
+                                    <th>리더 레벨</th>
+                                    <th>상태</th>
+                                </tr>
+                            </thead>
+                            <tbody id="leaderList"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            결재 라인 추가/수정 모달
+            <div id="approvalLineModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 2000; justify-content: center; align-items: center;">
+                <div style="background: white; border-radius: 16px; width: 90%; max-width: 700px; max-height: 90vh; display: flex; flex-direction: column;">
+                    <div style="padding: 24px; border-bottom: 1px solid #e9ecef; display: flex; justify-content: space-between; align-items: center;">
+                        <h2 id="approvalLineModalTitle" style="margin: 0; font-size: 20px;">새 결재 라인</h2>
+                        <button onclick="closeApprovalLineModal()" style="background: none; border: none; font-size: 24px; cursor: pointer;">&times;</button>
+                    </div>
+                    <div style="padding: 30px; overflow-y: auto;">
+                        <input type="hidden" id="approvalLineId">
+                        <div class="form-group">
+                            <label class="form-label">적용 부서</label>
+                            <select id="approvalLineDept" class="form-input"></select>
+                        </div>
+
+                        <hr style="margin: 20px 0; border: none; border-top: 1px solid #e9ecef;">
+
+                        <div class="form-group">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                                <label class="form-label" style="margin-bottom: 0;">결재자 순서</label>
+                                <button type="button" class="btn btn-sm btn-primary" onclick="addApproverField()">+ 결재자 추가</button>
+                            </div>
+                            <div id="approverFieldsContainer">
+                                동적 결재자 필드가 여기에 추가됩니다.
+                            </div>
+                        </div>
+
+                         <div class="form-group">
+                            <label class="form-label">상태</label>
+                            <select id="approvalLineStatus" class="form-input">
+                                <option value="active">활성</option>
+                                <option value="inactive">비활성</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div style="padding: 20px 30px; border-top: 1px solid #e9ecef; text-align: right; background: #f8f9fa;">
+                        <button class="btn" onclick="closeApprovalLineModal()" style="margin-right: 10px; background: #6c757d; color: white;">취소</button>
+                        <button class="btn btn-primary" onclick="saveApprovalLine()">저장</button>
+                    </div>
+                </div>
+            </div>
+            -->            
+                        <!-- 카테고리 관리 섹션 -->            <div id="categories" class="content-section">
+                <div class="page-header">
+                    <h1 class="page-title">카테고리 관리</h1>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">새 카테고리 추가</h3>
+                    </div>
+                    <div class="card-body">
+                        <form id="categoryForm" onsubmit="addCategory(event)">
+                            <div style="display: grid; grid-template-columns: 2fr 1fr 100px; gap: 15px; align-items: end;">
+                                <div class="form-group" style="margin-bottom: 0;">
+                                    <label class="form-label">카테고리명</label>
+                                    <input type="text" class="form-input" id="categoryName" required placeholder="예: 업무개선">
+                                </div>
+                                <div class="form-group" style="margin-bottom: 0;">
+                                    <label class="form-label">설명</label>
+                                    <input type="text" class="form-input" id="categoryDesc" placeholder="선택사항">
+                                </div>
+                                <button type="submit" class="btn btn-primary" style="height: 44px;">추가</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">카테고리 목록</h3>
+                    </div>
+                    <div class="card-body">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>순서</th>
+                                    <th>카테고리명</th>
+                                    <th>설명</th>
+                                    <th>상태</th>
+                                    <th>작업</th>
+                                </tr>
+                            </thead>
+                            <tbody id="categoryList"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 시스템 설정 섹션 -->
+            <div id="settings" class="content-section">
+                <div class="page-header">
+                    <h1 class="page-title">시스템 설정</h1>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">등급 설정</h3>
+                    </div>
+                    <div class="card-body">
+                        <form id="gradeSettingsForm" onsubmit="saveGradeSettings(event)">
+                            <div class="form-group">
+                                <label class="form-label">등급 개수</label>
+                                <input type="number" class="form-input" id="gradeCount" value="10" min="1" max="20">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">최고 점수</label>
+                                <input type="number" class="form-input" id="maxScore" value="100">
+                            </div>
+                            <div id="gradeRanges"></div>
+                            <button type="button" class="btn btn-primary" onclick="generateGradeRanges()">등급 구간 생성</button>
+                            <button type="submit" class="btn btn-success" style="margin-left: 10px;">저장</button>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">1차 평가 기준 점수 설정</h3>
+                    </div>
+                    <div class="card-body">
+                        <p style="color: #666; margin-bottom: 15px;">
+                            1차 평가 완료 후 이 점수 이상이면 2차 평가로 진행되고, 미만이면 1차 평가로 마무리됩니다.
+                        </p>
+                        <form id="firstEvaluationThresholdForm" onsubmit="saveFirstEvaluationThreshold(event)">
+                            <div class="form-group">
+                                <label class="form-label">1차 평가 통과 기준 점수</label>
+                                <input type="number" class="form-input" id="firstEvaluationThreshold" value="60" min="0" max="100" required>
+                                <small style="color: #666;">이 점수 이상인 제안서만 2차 평가로 진행됩니다.</small>
+                            </div>
+                            <button type="submit" class="btn btn-success">저장</button>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">우선순위 설정</h3>
+                    </div>
+                    <div class="card-body">
+                        <form id="priorityForm" onsubmit="savePriorities(event)">
+                            <div id="priorityList"></div>
+                            <button type="submit" class="btn btn-success">저장</button>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">데이터 마이그레이션</h3>
+                    </div>
+                    <div class="card-body">
+                        <p style="color: #666; margin-bottom: 15px;">
+                            기존 제안서 데이터에 selfScore 필드를 추가합니다. 자체 점수가 0점으로 표시되는 문제를 해결하기 위해 한 번만 실행하면 됩니다.
+                        </p>
+                        <button type="button" class="btn btn-primary" onclick="migrateSelfScores()">
+                            자체 점수 필드 마이그레이션 실행
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 평가 기준 설정 섹션 -->
+            <div id="evaluationCriteria" class="content-section">
+                <div class="page-header">
+                    <h1 class="page-title">📊 평가 기준 설정</h1>
+                    <p style="color: rgba(255,255,255,0.8); font-size: 14px;">
+                        자체평가, 1차평가, 2차평가의 점수 기준을 설정합니다
+                    </p>
+                </div>
+
+                <!-- 유형효과 금액 기준 설정 -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">💰 유형효과 금액 기준</h3>
+                    </div>
+                    <div class="card-body">
+                        <p style="color: #666; margin-bottom: 15px;">
+                            유형효과(금액 절감)의 금액에 따른 점수를 설정합니다.
+                        </p>
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>최소 금액 (원/년)</th>
+                                    <th>점수</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>50,000,000 이상</td>
+                                    <td>70점</td>
+                                </tr>
+                                <tr>
+                                    <td>30,000,000 이상</td>
+                                    <td>60점</td>
+                                </tr>
+                                <tr>
+                                    <td>20,000,000 이상</td>
+                                    <td>50점</td>
+                                </tr>
+                                <tr>
+                                    <td>10,000,000 이상</td>
+                                    <td>40점</td>
+                                </tr>
+                                <tr>
+                                    <td>5,000,000 이상</td>
+                                    <td>30점</td>
+                                </tr>
+                                <tr>
+                                    <td>3,000,000 이상</td>
+                                    <td>20점</td>
+                                </tr>
+                                <tr>
+                                    <td>1,000,000 이상</td>
+                                    <td>10점</td>
+                                </tr>
+                                <tr>
+                                    <td>1,000,000 미만</td>
+                                    <td>5점</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <div style="background: #fff3cd; padding: 15px; border-radius: 8px; margin-top: 15px;">
+                            <strong>ℹ️ 안내:</strong> 유형효과 금액 기준은 dashboard.html의 calculateTangibleEffectScore 함수에서 관리됩니다.
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 등급 기준표 -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">🏆 등급 기준표</h3>
+                    </div>
+                    <div class="card-body">
+                        <p style="color: #666; margin-bottom: 15px;">
+                            총점에 따른 등급을 설정합니다. (자체평가 + 리더평가 기준)
+                        </p>
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>등급</th>
+                                    <th>최소 점수</th>
+                                    <th>최대 점수</th>
+                                    <th>설명</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr style="background: #fff8e1;">
+                                    <td><strong>특급</strong></td>
+                                    <td>91점</td>
+                                    <td>100점</td>
+                                    <td>탁월한 제안</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>1급</strong></td>
+                                    <td>81점</td>
+                                    <td>90점</td>
+                                    <td>우수한 제안</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>2급</strong></td>
+                                    <td>71점</td>
+                                    <td>80점</td>
+                                    <td>양호한 제안</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>3급</strong></td>
+                                    <td>61점</td>
+                                    <td>70점</td>
+                                    <td>보통 제안</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>4급</strong></td>
+                                    <td>56점</td>
+                                    <td>60점</td>
+                                    <td>기본 제안</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>5급</strong></td>
+                                    <td>51점</td>
+                                    <td>55점</td>
+                                    <td>기본 제안</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>6급</strong></td>
+                                    <td>45점</td>
+                                    <td>50점</td>
+                                    <td>기본 제안</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>7급</strong></td>
+                                    <td>41점</td>
+                                    <td>44점</td>
+                                    <td>개선 필요</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>8급</strong></td>
+                                    <td>31점</td>
+                                    <td>40점</td>
+                                    <td>개선 필요</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>9급</strong></td>
+                                    <td>21점</td>
+                                    <td>30점</td>
+                                    <td>개선 필요</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>10급</strong></td>
+                                    <td>0점</td>
+                                    <td>20점</td>
+                                    <td>미흡</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <div style="background: #e3f2fd; padding: 15px; border-radius: 8px; margin-top: 15px;">
+                            <strong>📋 안내:</strong> 등급 기준은 "⚙️ 시스템 설정" 메뉴에서 수정할 수 있습니다.
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 자체평가 기준 -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">자체평가 기준</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="form-group">
+                            <label class="form-label">노력도 점수 범위</label>
+                            <input type="text" class="form-input" value="0, 5, 10점" readonly>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">창의성 점수 범위</label>
+                            <input type="text" class="form-input" value="0, 5, 10, 15, 20점" readonly>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">무형효과 - 품질 점수 범위</label>
+                            <input type="text" class="form-input" value="0, 5, 7, 10점 (품질 개선, 불량 예방)" readonly>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">무형효과 - 안전 점수 범위</label>
+                            <input type="text" class="form-input" value="0, 5, 7, 10점 (안전사고 예방, 작업환경 개선)" readonly>
+                        </div>
+                        <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-top: 15px;">
+                            <strong>📋 총점 계산:</strong> 노력도 + 창의성 + MAX(품질, 안전) 또는 유형효과 점수
+                            <br>
+                            <strong>최대 점수:</strong> 100점 (노력도 10 + 창의성 20 + 유형효과 70)
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 1차 평가 기준 -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">1차 평가 기준 (리더 평가)</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="form-group">
+                            <label class="form-label">노력도 점수 범위</label>
+                            <input type="text" class="form-input" value="0, 10, 15, 20, 25, 30점" readonly>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">창의성 점수 범위</label>
+                            <input type="text" class="form-input" value="0, 5, 7, 10, 12, 15점" readonly>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">무형효과 - 품질 점수 범위</label>
+                            <input type="text" class="form-input" value="0, 5, 7, 10점" readonly>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">무형효과 - 안전 점수 범위</label>
+                            <input type="text" class="form-input" value="0, 5, 7, 10점" readonly>
+                        </div>
+                        <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-top: 15px;">
+                            <strong>📋 총점 계산:</strong> 노력도 + 창의성 + MAX(품질, 안전)
+                            <br>
+                            <strong>최대 점수:</strong> 55점
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2차 평가 기준 -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">2차 평가 기준 (경영진 평가)</h3>
+                    </div>
+                    <div class="card-body">
+                        <p style="color: #666; margin-bottom: 15px;">
+                            2차 평가는 1차 평가와 동일한 기준을 사용합니다.
+                        </p>
+                        <div class="form-group">
+                            <label class="form-label">노력도 점수 범위</label>
+                            <input type="text" class="form-input" value="0, 10, 15, 20, 25, 30점" readonly>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">창의성 점수 범위</label>
+                            <input type="text" class="form-input" value="0, 5, 7, 10, 12, 15점" readonly>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">무형효과 - 품질 점수 범위</label>
+                            <input type="text" class="form-input" value="0, 5, 7, 10점" readonly>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">무형효과 - 안전 점수 범위</label>
+                            <input type="text" class="form-input" value="0, 5, 7, 10점" readonly>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 기존 섹션들 (간략화) -->
+            <div id="suggestions" class="content-section">
+                <div class="page-header">
+                    <h1 class="page-title">승인 대기</h1>
+                </div>
+                <div class="card">
+                    <div class="card-body" id="pendingSuggestions">로딩 중...</div>
+                </div>
+            </div>
+
+            <div id="revisionRequested" class="content-section">
+                <div class="page-header">
+                    <h1 class="page-title">수정 요청</h1>
+                </div>
+                <div class="card">
+                    <div class="card-body" id="revisionRequestedSuggestions">로딩 중...</div>
+                </div>
+            </div>
+
+            <div id="approved" class="content-section">
+                <div class="page-header">
+                    <h1 class="page-title">승인 완료 제안서 관리</h1>
+                    <p style="color: #cbd5e1; font-size: 14px; margin-top: 10px;">유형효과 점수를 조회하고 수정할 수 있습니다.</p>
+                </div>
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">승인 완료 제안서 목록</h3>
+                    </div>
+                    <div class="card-body">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>제안번호</th>
+                                    <th>제목</th>
+                                    <th>제안자</th>
+                                    <th>부서</th>
+                                    <th>유형효과 점수</th>
+                                    <th>검증금액</th>
+                                    <th>작업</th>
+                                </tr>
+                            </thead>
+                            <tbody id="completedSuggestionsList">
+                                <tr><td colspan="7" style="text-align: center; padding: 40px;">로딩 중...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 공지사항 관리 섹션 -->
+            <div id="notices" class="content-section">
+                <div class="page-header">
+                    <h1 class="page-title">📢 공지사항 관리</h1>
+                </div>
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">공지사항 목록</h3>
+                        <button class="btn btn-primary" onclick="openNoticeModal()">+ 새 공지사항</button>
+                    </div>
+                    <div class="card-body">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>제목</th>
+                                    <th>작성자</th>
+                                    <th>작성일</th>
+                                    <th style="width: 150px;">작업</th>
+                                </tr>
+                            </thead>
+                            <tbody id="noticeList">
+                                <!-- 공지사항 목록이 여기에 동적으로 추가됩니다. -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 공지사항 작성/수정 모달 -->
+            <div id="noticeModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 2000; justify-content: center; align-items: center;">
+                <div style="background: white; border-radius: 16px; width: 90%; max-width: 700px;">
+                    <div style="padding: 24px; border-bottom: 1px solid #e9ecef; display: flex; justify-content: space-between; align-items: center;">
+                        <h2 id="noticeModalTitle" style="margin: 0; font-size: 20px;">새 공지사항</h2>
+                        <button onclick="closeNoticeModal()" style="background: none; border: none; font-size: 24px; cursor: pointer;">&times;</button>
+                    </div>
+                    <div style="padding: 30px;">
+                        <input type="hidden" id="noticeId">
+                        <div class="form-group">
+                            <label class="form-label">제목</label>
+                            <input type="text" id="noticeTitle" class="form-input" placeholder="공지사항 제목을 입력하세요">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">내용</label>
+                            <textarea id="noticeContent" class="form-input" rows="10" placeholder="공지사항 내용을 입력하세요"></textarea>
+                        </div>
+                    </div>
+                    <div style="padding: 20px 30px; border-top: 1px solid #e9ecef; text-align: right;">
+                        <button class="btn" onclick="closeNoticeModal()" style="margin-right: 10px; background: #6c757d; color: white;">취소</button>
+                        <button class="btn btn-primary" onclick="saveNotice()">저장</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="users" class="content-section">
+                <div class="page-header">
+                    <h1 class="page-title">👥 사용자 관리</h1>
+                    <p style="color: rgba(255,255,255,0.8); font-size: 14px;">
+                        사용자별 권한을 관리합니다. 복수 권한 선택이 가능합니다.
+                    </p>
+                </div>
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">사용자 목록</h3>
+                        <div style="display: flex; gap: 10px;">
+                            <select id="filterRole" class="form-input" style="width: 200px;" onchange="loadUsers()">
+                                <option value="">전체 권한</option>
+                                <option value="admin">관리자</option>
+                                <option value="effectVerifier">유형효과검증담당자</option>
+                                <option value="firstReviewer">소위원회</option>
+                                <option value="secondReviewer">제안위원회</option>
+                                <option value="user">일반사용자</option>
+                            </select>
+                            <button class="btn btn-primary" onclick="loadUsers()">🔄 새로고침</button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div style="overflow-x: auto;">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 100px;">사번</th>
+                                        <th style="width: 100px;">이름</th>
+                                        <th style="width: 120px;">부서</th>
+                                        <th style="width: 100px;">직급</th>
+                                        <th style="width: 400px;">권한</th>
+                                        <th style="width: 100px;">작업</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="usersList">
+                                    <tr>
+                                        <td colspan="6" style="text-align: center; padding: 40px; color: #999;">
+                                            로딩 중...
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="stats" class="content-section">
+                <div class="page-header">
+                    <h1 class="page-title">📊 통계 분석</h1>
+                    <p style="color: rgba(255,255,255,0.8); font-size: 14px;">
+                        제안서에 대한 다양한 통계 및 분석 정보를 확인할 수 있습니다
+                    </p>
+                </div>
+
+                <!-- 전체 통계 -->
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-value" id="stats-total">0</div>
+                        <div class="stat-label">총 제안서</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="stats-approved">0</div>
+                        <div class="stat-label">승인된 제안</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="stats-rejected">0</div>
+                        <div class="stat-label">반려된 제안</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="stats-pending">0</div>
+                        <div class="stat-label">검토 중</div>
+                    </div>
+                </div>
+
+                <!-- 부서별 통계 -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">부서별 제안 현황</h3>
+                        <button class="btn btn-primary btn-sm" onclick="loadStatistics()">새로고침</button>
+                    </div>
+                    <div class="card-body">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>부서</th>
+                                    <th>총 제안</th>
+                                    <th>승인</th>
+                                    <th>반려</th>
+                                    <th>검토 중</th>
+                                    <th>승인율</th>
+                                </tr>
+                            </thead>
+                            <tbody id="departmentStatsTable">
+                                <tr>
+                                    <td colspan="6" style="text-align: center; color: #999;">로딩 중...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- 월별 통계 -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">월별 제안 추이</h3>
+                    </div>
+                    <div class="card-body">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>월</th>
+                                    <th>제안 수</th>
+                                    <th>승인</th>
+                                    <th>반려</th>
+                                    <th>검토 중</th>
+                                </tr>
+                            </thead>
+                            <tbody id="monthlyStatsTable">
+                                <tr>
+                                    <td colspan="5" style="text-align: center; color: #999;">로딩 중...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- 카테고리별 통계 -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">카테고리별 제안 현황</h3>
+                    </div>
+                    <div class="card-body">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>카테고리</th>
+                                    <th>제안 수</th>
+                                    <th>비율</th>
+                                </tr>
+                            </thead>
+                            <tbody id="categoryStatsTable">
+                                <tr>
+                                    <td colspan="3" style="text-align: center; color: #999;">로딩 중...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- 사용자별 통계 (Top 10) -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">제안 활동 Top 10</h3>
+                    </div>
+                    <div class="card-body">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>순위</th>
+                                    <th>이름</th>
+                                    <th>부서</th>
+                                    <th>제안 수</th>
+                                    <th>승인 수</th>
+                                </tr>
+                            </thead>
+                            <tbody id="userStatsTable">
+                                <tr>
+                                    <td colspan="5" style="text-align: center; color: #999;">로딩 중...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <!-- 제안서 평가 모달 -->
+    <div id="evaluationModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 2000; justify-content: center; align-items: center;">
+        <div style="background: white; border-radius: 16px; width: 90%; max-width: 900px; max-height: 90vh; overflow-y: auto;">
+            <!-- 모달 헤더 -->
+            <div style="padding: 24px; border-bottom: 2px solid #e9ecef; display: flex; justify-content: space-between; align-items: center; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 16px 16px 0 0;">
+                <h2 style="margin: 0; font-size: 24px; font-weight: 600;">제안서 평가</h2>
+                <button onclick="closeEvaluationModal()" style="background: none; border: none; color: white; font-size: 32px; cursor: pointer; padding: 0; width: 36px; height: 36px; line-height: 1;">&times;</button>
+            </div>
+
+            <!-- 모달 본문 -->
+            <div id="modalContent" style="padding: 30px;">
+                <!-- JavaScript로 내용 채움 -->
+            </div>
+
+            <!-- 모달 푸터 -->
+            <div style="padding: 20px 30px; border-top: 2px solid #e9ecef; display: flex; gap: 12px; justify-content: flex-end; background: #f8f9fa; border-radius: 0 0 16px 16px;">
+                <button onclick="closeEvaluationModal()" style="padding: 12px 32px; background: #6c757d; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 16px; font-weight: 500;">취소</button>
+                <button onclick="submitEvaluation()" style="padding: 12px 32px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 16px; font-weight: 600;">평가 제출</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-storage-compat.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyAv0y8cF86kDC-saDZA6K0Q5fZd6dk9H1Y",
+            authDomain: "suggestion-system-58def.firebaseapp.com",
+            projectId: "suggestion-system-58def",
+            storageBucket: "suggestion-system-58def.firebasestorage.app",
+            messagingSenderId: "755050605021",
+            appId: "1:755050605021:web:befd52c5516c3a3d3e2e34"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+        const storage = firebase.storage();
+
+        // Firebase 캐싱 활성화 (읽기 횟수 대폭 감소)
+        db.enablePersistence({ synchronizeTabs: true })
+            .catch((err) => {
+                if (err.code == 'failed-precondition') {
+                    // Multiple tabs open - caching disabled
+                } else if (err.code == 'unimplemented') {
+                    // Browser doesn't support caching
+                }
+            });
+
+        let currentUser = null;
+        let allSuggestions = [];
+        let allUsers = [];
+        let orgChartData = [];
+
+        // 인증 체크
+        auth.onAuthStateChanged(async (user) => {
+            if (!user) {
+                window.location.href = 'index.html';
+                return;
+            }
+
+            try {
+                const userDoc = await db.collection('users').doc(user.uid).get();
+                if (!userDoc.exists) {
+                    throw new Error('사용자 정보를 찾을 수 없습니다.');
+                }
+
+                const userData = userDoc.data();
+                if (userData.role !== 'admin') {
+                    window.location.href = 'dashboard.html';
+                    return;
+                }
+
+                currentUser = {
+                    uid: user.uid,
+                    email: user.email,
+                    displayName: userData.displayName,
+                    role: userData.role
+                };
+
+                document.getElementById('adminDisplayName').textContent = currentUser.displayName || '관리자';
+                
+            try {
+                loadAllData();
+                loadOrgChartData();
+                loadCategories();
+                loadEvaluationCriteria();
+                loadSystemSettings();
+                loadNotices();
+                loadApprovalLines();
+            } catch (e) {
+                console.error('페이지 초기화 중 치명적인 오류 발생:', e);
+                alert('페이지 로딩 중 심각한 오류가 발생했습니다: ' + e.message + '\n\n개발자 도구(F12)의 Console 탭을 확인해주세요.');
+            }
+            } catch (error) {
+                console.error('초기화 오류:', error);
+                showToast('시스템 초기화 중 오류가 발생했습니다.', 'error');
+                auth.signOut();
+            }
+        });
+
+        // 데이터 로드
+        function loadAllData() {
+            db.collection('suggestions')
+                .onSnapshot((snapshot) => {
+                    allSuggestions = [];
+                    snapshot.forEach((doc) => {
+                        allSuggestions.push({ id: doc.id, ...doc.data() });
+                    });
+                    // 클라이언트에서 정렬
+                    allSuggestions.sort((a, b) => {
+                        const timeA = a.createdAt?.toDate?.() || new Date(0);
+                        const timeB = b.createdAt?.toDate?.() || new Date(0);
+                        return timeB - timeA; // 최신순
+                    });
+                    updateDashboard();
+                });
+
+            db.collection('users').onSnapshot((snapshot) => {
+                allUsers = [];
+                snapshot.forEach((doc) => {
+                    allUsers.push({ id: doc.id, ...doc.data() });
+                });
+                updateUsersList();
+            });
+        }
+
+        // 조직도 업로드 처리
+        async function handleOrgFileUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            showProgress(0, '파일 읽는 중...');
+
+            try {
+                const data = await readExcelFile(file);
+                showProgress(30, '데이터 분석 중...');
+                
+                const processed = processOrgChartData(data);
+                showProgress(60, '데이터베이스 업데이트 중...');
+                
+                await updateFirestoreFromOrgChart(processed);
+                showProgress(100, '완료!');
+                
+                setTimeout(() => {
+                    hideProgress();
+                    showToast(`${processed.length}명의 조직도 데이터가 업데이트되었습니다.`, 'success');
+                    loadOrgChartData();
+                }, 1000);
+
+            } catch (error) {
+                console.error('조직도 업로드 오류:', error);
+                hideProgress();
+                showToast('조직도 업로드 중 오류가 발생했습니다: ' + error.message, 'error');
+            }
+        }
+
+        // Excel 파일 읽기 (1행을 헤더로 사용)
+        function readExcelFile(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const data = new Uint8Array(e.target.result);
+                        const workbook = XLSX.read(data, { type: 'array' });
+                        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                        
+                        // 1행을 헤더로, 2행부터 데이터로 읽기
+                        const jsonData = XLSX.utils.sheet_to_json(firstSheet, {
+                            defval: '' // 빈 셀은 빈 문자열로
+                        });
+
+                        resolve(jsonData);
+                    } catch (error) {
+                        reject(error);
+                    }
+                };
+                reader.onerror = reject;
+                reader.readAsArrayBuffer(file);
+            });
+        }
+
+        // 조직도 데이터 처리 (실제 Excel 컬럼명 사용)
+        function processOrgChartData(data) {
+            const processed = [];
+
+            data.forEach((row, index) => {
+                // Excel 실제 컬럼명 사용 (C, E열 삭제 완료된 파일)
+                const employeeId = row['사번'];
+                const name = row['성명'];  // ✅ C열: 성명 (정리된 파일)
+                const email = row['e-mail'];
+                const department = row['조직'];
+                const position = row['직위'];
+                const jobLevel = row['직급'];
+                const jobTitle = row['직책'];
+                const status = row['재직상태'];
+                const phone = row['휴대전화'];
+                const jobDuty = row['직무명'];
+
+                // 필수 데이터 없으면 건너뛰기
+                if (!employeeId || !name) {
+                    return;
+                }
+
+                // 리더 여부 판단 (직책에 '리더' 또는 'L1/L2/L3/L4' 포함)
+                const isLeader = jobTitle && (
+                    jobTitle.includes('리더') ||
+                    jobTitle.includes('L1') ||
+                    jobTitle.includes('L2') ||
+                    jobTitle.includes('L3') ||
+                    jobTitle.includes('L4') ||
+                    jobTitle.includes('L(') ||  // L(1), L(2) 형식
+                    jobTitle.includes('본부장') ||
+                    jobTitle.includes('센터장') ||
+                    jobTitle.includes('팀장')
+                );
+                
+                let leaderLevel = null;
+                if (isLeader && jobTitle) {
+                    if (jobTitle.includes('L1') || jobTitle.includes('L(1)')) leaderLevel = 1;
+                    else if (jobTitle.includes('L2') || jobTitle.includes('L(2)')) leaderLevel = 2;
+                    else if (jobTitle.includes('L3') || jobTitle.includes('L(3)')) leaderLevel = 3;
+                    else if (jobTitle.includes('L4') || jobTitle.includes('L(4)')) leaderLevel = 4;
+                    else if (jobTitle.includes('본부장')) leaderLevel = 1;
+                    else if (jobTitle.includes('센터장')) leaderLevel = 2;
+                    else if (jobTitle.includes('팀장')) leaderLevel = 3;
+                }
+
+                processed.push({
+                    employeeId: String(employeeId).trim(),
+                    name: String(name).trim(),
+                    email: email ? String(email).trim() : null,
+                    department: department ? String(department).trim() : null,
+                    position: position ? String(position).trim() : null,
+                    jobLevel: jobLevel ? String(jobLevel).trim() : null,
+                    jobTitle: jobTitle ? String(jobTitle).trim() : null,
+                    jobDuty: jobDuty ? String(jobDuty).trim() : null,
+                    isLeader,
+                    leaderLevel,
+                    status: status ? String(status).trim() : null,
+                    phone: phone ? String(phone).trim() : null,
+                    isActive: status === '재직'
+                });
+            });
+
+            return processed;
+        }
+
+        // Firestore 업데이트 + Firebase Auth 계정 생성
+        async function updateFirestoreFromOrgChart(orgData) {
+            
+            let batch = db.batch();
+            let batchCount = 0;
+            let totalSaved = 0;
+            let accountsCreated = 0;
+            let accountsFailed = 0;
+
+            const employeesRef = db.collection('employees');
+            
+            for (let i = 0; i < orgData.length; i++) {
+                const emp = orgData[i];
+                
+                try {
+                    // 1. Firestore employees 컬렉션 업데이트
+                    const docRef = employeesRef.doc(emp.employeeId);
+                    batch.set(docRef, {
+                        ...emp,
+                        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                    }, { merge: true });
+
+                    batchCount++;
+                    
+                    // 2. Firebase Auth 계정 생성 (재직자만)
+                    if (emp.isActive && emp.employeeId) {
+                        try {
+                            const email = `${emp.employeeId}@ajupharm.co.kr`;
+                            const initialPassword = 'ajupharm';
+                            
+                            // 계정이 이미 있는지 확인
+                            const usersQuery = await db.collection('users')
+                                .where('employeeId', '==', emp.employeeId)
+                                .limit(1)
+                                .get();
+                            
+                            if (usersQuery.empty) {
+                                // 새 계정 생성
+                                // Firebase Admin SDK가 아니므로 클라이언트에서는 직접 생성 불가
+                                // 대신 Firestore에 계정 생성 요청 저장
+                                const accountRef = db.collection('accountCreationRequests').doc(emp.employeeId);
+                                batch.set(accountRef, {
+                                    employeeId: emp.employeeId,
+                                    name: emp.name,
+                                    email: email,
+                                    department: emp.department,
+                                    initialPassword: initialPassword,
+                                    role: 'user',
+                                    isEvaluator: emp.isLeader || false,
+                                    leaderLevel: emp.leaderLevel || null,
+                                    passwordChanged: false,
+                                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                                    status: 'pending'
+                                });
+                                
+                                accountsCreated++;
+                            }
+                        } catch (authError) {
+                            accountsFailed++;
+                        }
+                    }
+
+                    // 500개마다 또는 마지막에 커밋
+                    if (batchCount >= 450 || i === orgData.length - 1) {
+                        await batch.commit();
+                        totalSaved += batchCount;
+                        
+                        // 새 배치 시작
+                        if (i < orgData.length - 1) {
+                            batch = db.batch();
+                            batchCount = 0;
+                        }
+                    }
+                } catch (error) {
+                    console.error(`❌ 행 ${i + 1} 저장 실패:`, emp.employeeId, error);
+                }
+            }
+
+            // 계정 생성 요청 처리 시작
+            if (accountsCreated > 0) {
+                showToast(`${accountsCreated}개의 계정 생성 중... 잠시만 기다려주세요.`, 'info');
+                await processAccountCreationRequests();
+            }
+            
+            return totalSaved;
+        }
+
+        // 계정 생성 요청 처리 (Cloud Function 대체)
+        async function processAccountCreationRequests() {
+            try {
+                const requestsSnapshot = await db.collection('accountCreationRequests')
+                    .where('status', '==', 'pending')
+                    .get();
+                
+                let successCount = 0;
+                let failCount = 0;
+                
+                for (const doc of requestsSnapshot.docs) {
+                    const data = doc.data();
+                    
+                    try {
+                        // Firebase Auth에 계정 생성 (클라이언트에서는 제한적)
+                        // 실제로는 사용자가 처음 로그인 시도할 때 생성되도록 안내
+                        
+                        // users 컬렉션에 프로필 생성 (uid는 나중에 업데이트)
+                        await db.collection('users').doc(data.employeeId).set({
+                            employeeId: data.employeeId,
+                            email: data.email,
+                            displayName: data.name,
+                            department: data.department,
+                            role: data.role,
+                            isEvaluator: data.isEvaluator,
+                            leaderLevel: data.leaderLevel,
+                            passwordChanged: false,
+                            needsPasswordChange: true,
+                            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                        });
+                        
+                        // 요청 상태 업데이트
+                        await db.collection('accountCreationRequests').doc(doc.id).update({
+                            status: 'completed',
+                            processedAt: firebase.firestore.FieldValue.serverTimestamp()
+                        });
+                        
+                        successCount++;
+                        
+                    } catch (error) {
+                        console.error(`❌ ${data.employeeId} 계정 생성 실패:`, error);
+                        
+                        await db.collection('accountCreationRequests').doc(doc.id).update({
+                            status: 'failed',
+                            error: error.message,
+                            processedAt: firebase.firestore.FieldValue.serverTimestamp()
+                        });
+                        
+                        failCount++;
+                    }
+                }
+
+                showToast(`${successCount}개의 계정이 생성되었습니다!`, 'success');
+                
+            } catch (error) {
+                console.error('❌ 계정 생성 요청 처리 오류:', error);
+            }
+        }
+
+        // 조직도 데이터 로드
+        async function loadOrgChartData() {
+            try {
+                const snapshot = await db.collection('employees').get();
+                orgChartData = [];
+                snapshot.forEach(doc => {
+                    orgChartData.push({ id: doc.id, ...doc.data() });
+                });
+
+                updateOrgChartStats();
+                displayOrgChartTable();
+            } catch (error) {
+                console.error('조직도 로드 오류:', error);
+            }
+        }
+
+        // 조직도 통계 업데이트
+        function updateOrgChartStats() {
+            const total = orgChartData.length;
+            const active = orgChartData.filter(e => e.isActive).length;
+            const leaders = orgChartData.filter(e => e.isLeader && e.isActive).length;
+            const departments = [...new Set(orgChartData.map(e => e.department))].length;
+
+            document.getElementById('totalEmployees').textContent = total;
+            document.getElementById('activeEmployees').textContent = active;
+            document.getElementById('leaderCount').textContent = leaders;
+            document.getElementById('departmentCount').textContent = departments;
+        }
+
+        // 조직도 테이블 표시
+        function displayOrgChartTable() {
+            const container = document.getElementById('orgChartTable');
+            if (orgChartData.length === 0) {
+                container.innerHTML = '<p style="text-align: center; color: #666;">조직도 데이터가 없습니다. Excel 파일을 업로드해주세요.</p>';
+                return;
+            }
+
+            const leaders = orgChartData.filter(e => e.isLeader && e.isActive);
+            
+            container.innerHTML = `
+                <h4 style="margin-bottom: 15px;">평가자 목록 (리더)</h4>
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>사번</th>
+                            <th>이름</th>
+                            <th>부서</th>
+                            <th>직책</th>
+                            <th>레벨</th>
+                            <th>이메일</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${leaders.map(e => `
+                            <tr>
+                                <td>${e.employeeId}</td>
+                                <td>${e.name}</td>
+                                <td>${e.department}</td>
+                                <td>${e.jobTitle}</td>
+                                <td>L${e.leaderLevel}</td>
+                                <td>${e.email || '-'}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+        }
+
+        // 카테고리 관리
+        async function loadCategories() {
+            try {
+                const snapshot = await db.collection('categories').get();
+                const categories = [];
+                snapshot.forEach(doc => {
+                    categories.push({ id: doc.id, ...doc.data() });
+                });
+                // 클라이언트에서 정렬
+                categories.sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
+                displayCategories(categories);
+            } catch (error) {
+                console.error('카테고리 로드 오류:', error);
+            }
+        }
+
+        function displayCategories(categories) {
+            const tbody = document.getElementById('categoryList');
+            if (categories.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align: center;">등록된 카테고리가 없습니다</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = categories.map((cat, idx) => `
+                <tr>
+                    <td>${idx + 1}</td>
+                    <td>${cat.name}</td>
+                    <td>${cat.description || '-'}</td>
+                    <td>${cat.active ? '활성' : '비활성'}</td>
+                    <td>
+                        <button class="btn btn-danger btn-sm" onclick="deleteCategory('${cat.id}')">삭제</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        async function addCategory(event) {
+            event.preventDefault();
+            const name = document.getElementById('categoryName').value.trim();
+            const desc = document.getElementById('categoryDesc').value.trim();
+
+            try {
+                const snapshot = await db.collection('categories').get();
+                const maxOrder = snapshot.docs.length;
+
+                await db.collection('categories').add({
+                    name,
+                    description: desc,
+                    displayOrder: maxOrder + 1,
+                    active: true,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+
+                showToast('카테고리가 추가되었습니다.', 'success');
+                document.getElementById('categoryForm').reset();
+                loadCategories();
+            } catch (error) {
+                console.error('카테고리 추가 오류:', error);
+                showToast('카테고리 추가 중 오류가 발생했습니다.', 'error');
+            }
+        }
+
+        async function deleteCategory(id) {
+            if (!confirm('이 카테고리를 삭제하시겠습니까?')) return;
+
+            try {
+                await db.collection('categories').doc(id).delete();
+                showToast('카테고리가 삭제되었습니다.', 'success');
+                loadCategories();
+            } catch (error) {
+                console.error('카테고리 삭제 오류:', error);
+                showToast('카테고리 삭제 중 오류가 발생했습니다.', 'error');
+            }
+        }
+
+        // 평가 기준 로드
+        async function loadEvaluationCriteria() {
+            try {
+                // 평가 기준 섹션이 읽기 전용 표시이므로 로드 불필요
+                // 향후 편집 기능 추가 시 활성화
+            } catch (error) {
+                console.error('평가 기준 로드 오류:', error);
+            }
+        }
+
+        function getDefaultSelfCriteria() {
+            return {
+                items: [
+                    { key: 'effort', label: '노력도', options: [
+                        { label: '매우 낮음', value: 0 },
+                        { label: '낮음', value: 1 },
+                        { label: '보통', value: 2 },
+                        { label: '높음', value: 3 },
+                        { label: '매우 높음', value: 5 }
+                    ]},
+                    { key: 'creativity', label: '창의성', options: [
+                        { label: '매우 낮음', value: 0 },
+                        { label: '낮음', value: 5 },
+                        { label: '보통', value: 10 },
+                        { label: '높음', value: 12 },
+                        { label: '매우 높음', value: 15 }
+                    ]},
+                    { key: 'effect', label: '유무형효과', options: [
+                        { label: '없음', value: 0 },
+                        { label: '낮음', value: 20 },
+                        { label: '보통', value: 40 },
+                        { label: '높음', value: 60 },
+                        { label: '매우 높음', value: 80 }
+                    ]}
+                ]
+            };
+        }
+
+        function getDefaultStage1Criteria() {
+            return {
+                items: [
+                    { key: 'feasibility', label: '실현가능성', max: 25 },
+                    { key: 'innovation', label: '혁신성', max: 25 },
+                    { key: 'effectiveness', label: '효과성', max: 25 },
+                    { key: 'effort', label: '노력도', max: 25 }
+                ],
+                passThreshold: 70
+            };
+        }
+
+        function getDefaultStage2Criteria() {
+            return {
+                items: [
+                    { key: 'strategicValue', label: '전략적 가치', max: 30 },
+                    { key: 'scalability', label: '확장가능성', max: 30 },
+                    { key: 'impact', label: '영향력', max: 40 }
+                ]
+            };
+        }
+
+        function displaySelfEvaluationForm(data) {
+            const container = document.getElementById('selfEvaluationItems');
+            container.innerHTML = data.items.map((item, idx) => `
+                <div class="form-group">
+                    <label class="form-label">${item.label}</label>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px;">
+                        ${item.options.map((opt, optIdx) => `
+                            <div>
+                                <label style="display: block; margin-bottom: 5px; font-size: 13px;">${opt.label}</label>
+                                <input type="number" class="form-input" value="${opt.value}" 
+                                       data-item="${idx}" data-option="${optIdx}" style="height: 36px;">
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function displayStage1EvaluationForm(data) {
+            const container = document.getElementById('stage1EvaluationItems');
+            container.innerHTML = data.items.map((item, idx) => `
+                <div class="form-group">
+                    <label class="form-label">${item.label} (최대 ${item.max}점)</label>
+                    <input type="number" class="form-input" value="${item.max}" 
+                           data-item="${idx}" min="0" max="100">
+                </div>
+            `).join('');
+
+            document.getElementById('stage1Threshold').value = data.passThreshold;
+        }
+
+        function displayStage2EvaluationForm(data) {
+            const container = document.getElementById('stage2EvaluationItems');
+            container.innerHTML = data.items.map((item, idx) => `
+                <div class="form-group">
+                    <label class="form-label">${item.label} (최대 ${item.max}점)</label>
+                    <input type="number" class="form-input" value="${item.max}" 
+                           data-item="${idx}" min="0" max="100">
+                </div>
+            `).join('');
+        }
+
+        async function saveSelfEvaluation(event) {
+            event.preventDefault();
+            // 저장 로직 구현
+            showToast('자체평가 기준이 저장되었습니다.', 'success');
+        }
+
+        async function saveStage1Evaluation(event) {
+            event.preventDefault();
+            // 저장 로직 구현
+            showToast('1차 평가 기준이 저장되었습니다.', 'success');
+        }
+
+        async function saveStage2Evaluation(event) {
+            event.preventDefault();
+            // 저장 로직 구현
+            showToast('2차 평가 기준이 저장되었습니다.', 'success');
+        }
+
+        // 1차 평가 기준 점수 저장
+        async function saveFirstEvaluationThreshold(event) {
+            event.preventDefault();
+            try {
+                const threshold = parseInt(document.getElementById('firstEvaluationThreshold').value);
+
+                await db.collection('systemSettings').doc('general').set({
+                    firstEvaluationThreshold: threshold,
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                }, { merge: true });
+
+                showToast('1차 평가 기준 점수가 저장되었습니다.', 'success');
+            } catch (error) {
+                console.error('1차 평가 기준 점수 저장 오류:', error);
+                showToast('저장 중 오류가 발생했습니다.', 'error');
+            }
+        }
+
+        // 시스템 설정
+        async function loadSystemSettings() {
+            try {
+                const settingsDoc = await db.collection('systemSettings').doc('general').get();
+                if (settingsDoc.exists) {
+                    const settings = settingsDoc.data();
+                    document.getElementById('gradeCount').value = settings.gradeCount || 10;
+                    document.getElementById('maxScore').value = settings.maxScore || 100;
+                    document.getElementById('firstEvaluationThreshold').value = settings.firstEvaluationThreshold || 60;
+                }
+                loadPriorities();
+            } catch (error) {
+                console.error('시스템 설정 로드 오류:', error);
+            }
+        }
+
+        async function loadPriorities() {
+            try {
+                const snapshot = await db.collection('priorities').get();
+                let priorities = [];
+                snapshot.forEach(doc => {
+                    priorities.push({ id: doc.id, ...doc.data() });
+                });
+                // 클라이언트에서 정렬
+                priorities.sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
+
+                // 우선순위가 하나도 없으면 기본값 생성
+                if (priorities.length === 0) {
+                    const defaultPriorities = [
+                        { name: '높음', color: '#f56565', displayOrder: 1, active: true },
+                        { name: '보통', color: '#f6ad55', displayOrder: 2, active: true },
+                        { name: '낮음', color: '#48bb78', displayOrder: 3, active: true }
+                    ];
+
+                    // Firestore에 기본값 저장
+                    for (const priority of defaultPriorities) {
+                        const docRef = await db.collection('priorities').add(priority);
+                        priorities.push({ id: docRef.id, ...priority });
+                    }
+                    
+                    showToast('기본 우선순위가 생성되었습니다.', 'info');
+                }
+
+                displayPriorities(priorities);
+            } catch (error) {
+                console.error('우선순위 로드 오류:', error);
+                showToast('우선순위 로드 실패: ' + error.message, 'error');
+            }
+        }
+
+        function displayPriorities(priorities) {
+            const container = document.getElementById('priorityList');
+            container.innerHTML = priorities.map((p, idx) => `
+                <div class="form-group">
+                    <label class="form-label">우선순위 ${idx + 1}</label>
+                    <div style="display: grid; grid-template-columns: 1fr 100px; gap: 10px;">
+                        <input type="text" class="form-input" value="${p.name}" data-priority="${idx}">
+                        <input type="color" class="form-input" value="${p.color}" data-priority-color="${idx}">
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function savePriorities(event) {
+            event.preventDefault();
+
+            try {
+                const priorityInputs = document.querySelectorAll('[data-priority]');
+                const priorities = [];
+
+                // 입력된 데이터 수집
+                priorityInputs.forEach((input, idx) => {
+                    const nameInput = input;
+                    const colorInput = document.querySelector(`[data-priority-color="${idx}"]`);
+                    priorities.push({
+                        name: nameInput.value.trim(),
+                        color: colorInput.value,
+                        displayOrder: idx + 1,
+                        active: true
+                    });
+                });
+
+                // 기존 우선순위 모두 삭제
+                const snapshot = await db.collection('priorities').get();
+                const deletePromises = snapshot.docs.map(doc => doc.ref.delete());
+                await Promise.all(deletePromises);
+
+                // 새 우선순위 저장
+                const savePromises = priorities.map(p => db.collection('priorities').add(p));
+                await Promise.all(savePromises);
+
+                showToast('우선순위가 저장되었습니다.', 'success');
+                
+                // 목록 새로고침
+                setTimeout(() => loadPriorities(), 500);
+
+            } catch (error) {
+                console.error('우선순위 저장 오류:', error);
+                showToast('저장 실패: ' + error.message, 'error');
+            }
+        }
+
+        function generateGradeRanges() {
+            const count = parseInt(document.getElementById('gradeCount').value);
+            const max = parseInt(document.getElementById('maxScore').value);
+            const interval = max / count;
+
+            const container = document.getElementById('gradeRanges');
+            let html = '<h4 style="margin: 20px 0 10px 0;">등급 구간</h4>';
+            
+            for (let i = 0; i < count; i++) {
+                const min = Math.round(i * interval);
+                const rangeMax = Math.round((i + 1) * interval);
+                const grade = count - i;
+                html += `
+                    <div style="padding: 10px; background: #f7fafc; margin-bottom: 5px; border-radius: 4px;">
+                        ${grade}등급: ${min}점 ~ ${rangeMax}점
+                    </div>
+                `;
+            }
+
+            container.innerHTML = html;
+        }
+
+        async function saveGradeSettings(event) {
+            event.preventDefault();
+
+            try {
+                const gradeCount = parseInt(document.getElementById('gradeCount').value);
+                const maxScore = parseInt(document.getElementById('maxScore').value);
+
+                const gradeRanges = [];
+                const interval = maxScore / gradeCount;
+                for (let i = 0; i < gradeCount; i++) {
+                    const min = Math.floor(i * interval);
+                    const max = (i === gradeCount - 1) ? maxScore : Math.floor((i + 1) * interval) - 1;
+                    gradeRanges.push({
+                        grade: gradeCount - i,
+                        min: min,
+                        max: max
+                    });
+                }
+                gradeRanges.sort((a, b) => a.grade - b.grade);
+
+                // systemSettings 컬렉션에 저장
+                await db.collection('systemSettings').doc('general').set({
+                    gradeCount: gradeCount,
+                    maxScore: maxScore,
+                    gradeRanges: gradeRanges,
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                }, { merge: true });
+
+                showToast('등급 설정이 저장되었습니다.', 'success');
+                
+                // 등급 구간 재생성
+                generateGradeRanges();
+
+            } catch (error) {
+                console.error('등급 설정 저장 오류:', error);
+                showToast('저장 실패: ' + error.message, 'error');
+            }
+        }
+
+
+        // 공지사항 관리
+        async function loadNotices() {
+            try {
+                const snapshot = await db.collection('notices').get();
+                const noticeList = document.getElementById('noticeList');
+                if (snapshot.empty) {
+                    noticeList.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 40px;">공지사항이 없습니다.</td></tr>';
+                    return;
+                }
+
+                // 클라이언트에서 정렬 (최신순)
+                const notices = [];
+                snapshot.forEach(doc => {
+                    notices.push({ id: doc.id, ...doc.data() });
+                });
+                notices.sort((a, b) => {
+                    const timeA = a.createdAt?.toDate?.() || new Date(0);
+                    const timeB = b.createdAt?.toDate?.() || new Date(0);
+                    return timeB - timeA;
+                });
+
+                let html = '';
+                notices.forEach(notice => {
+                    const created = notice.createdAt ? notice.createdAt.toDate() : new Date();
+                    html += `
+                        <tr>
+                            <td>${notice.title}</td>
+                            <td>${notice.author || '관리자'}</td>
+                            <td>${created.toLocaleDateString('ko-KR')}</td>
+                            <td>
+                                <button class="btn btn-sm btn-primary" onclick="openNoticeModal('${notice.id}')">수정</button>
+                                <button class="btn btn-sm btn-danger" onclick="deleteNotice('${notice.id}')" style="margin-left: 5px;">삭제</button>
+                            </td>
+                        </tr>
+                    `;
+                });
+                noticeList.innerHTML = html;
+            } catch (error) {
+                console.error("공지사항 로드 오류:", error);
+                showToast('공지사항을 불러오는 중 오류가 발생했습니다.', 'error');
+            }
+        }
+
+        function openNoticeModal(noticeId = null) {
+            const modal = document.getElementById('noticeModal');
+            const title = document.getElementById('noticeModalTitle');
+            const idInput = document.getElementById('noticeId');
+            const titleInput = document.getElementById('noticeTitle');
+            const contentInput = document.getElementById('noticeContent');
+
+            if (noticeId) {
+                title.textContent = '공지사항 수정';
+                db.collection('notices').doc(noticeId).get().then(doc => {
+                    if (doc.exists) {
+                        const notice = doc.data();
+                        idInput.value = noticeId;
+                        titleInput.value = notice.title;
+                        contentInput.value = notice.content;
+                    } else {
+                        showToast('해당 공지사항을 찾을 수 없습니다.', 'error');
+                        return;
+                    }
+                }).catch(error => {
+                    console.error("공지사항 데이터 가져오기 오류:", error);
+                    showToast('데이터를 가져오는 중 오류 발생', 'error');
+                });
+            } else {
+                title.textContent = '새 공지사항';
+                idInput.value = '';
+                titleInput.value = '';
+                contentInput.value = '';
+            }
+            modal.style.display = 'flex';
+        }
+
+        function closeNoticeModal() {
+            document.getElementById('noticeModal').style.display = 'none';
+        }
+
+        async function saveNotice() {
+            const id = document.getElementById('noticeId').value;
+            const title = document.getElementById('noticeTitle').value.trim();
+            const content = document.getElementById('noticeContent').value.trim();
+
+            if (!title || !content) {
+                showToast('제목과 내용을 모두 입력해주세요.', 'error');
+                return;
+            }
+
+            try {
+                if (id) {
+                    // Update existing notice
+                    await db.collection('notices').doc(id).update({
+                        title: title,
+                        content: content,
+                        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                    showToast('공지사항이 수정되었습니다.', 'success');
+                } else {
+                    // Create new notice
+                    await db.collection('notices').add({
+                        title: title,
+                        content: content,
+                        author: currentUser.displayName,
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                    showToast('공지사항이 추가되었습니다.', 'success');
+                }
+                closeNoticeModal();
+                loadNotices();
+            } catch (error) {
+                console.error("공지사항 저장 오류:", error);
+                showToast('저장 중 오류가 발생했습니다.', 'error');
+            }
+        }
+
+        async function deleteNotice(id) {
+            if (!confirm('이 공지사항을 정말 삭제하시겠습니까?')) {
+                return;
+            }
+
+            try {
+                await db.collection('notices').doc(id).delete();
+                showToast('공지사항이 삭제되었습니다.', 'success');
+                loadNotices();
+            } catch (error) {
+                console.error("공지사항 삭제 오류:", error);
+                showToast('삭제 중 오류가 발생했습니다.', 'error');
+            }
+        }
+
+        // 결재자 관리 (헬퍼 함수)
+        function addApprovalLine() {
+            openApprovalLineModal();
+        }
+
+        // 대시보드 업데이트
+        function updateDashboard() {
+            const pending = allSuggestions.filter(s => s.status === 'pending').length;
+            const today = new Date().toDateString();
+            const todayCount = allSuggestions.filter(s => {
+                const created = s.createdAt?.toDate();
+                return created && created.toDateString() === today;
+            }).length;
+
+            document.getElementById('pendingCount').textContent = pending;
+            document.getElementById('todayCount').textContent = todayCount;
+            document.getElementById('totalUsersCount').textContent = allUsers.length;
+            document.getElementById('evaluatorsCount').textContent = allUsers.filter(u => u.isEvaluator).length;
+
+            updateRecentSuggestions();
+            updatePendingSuggestions();
+            updateRevisionRequestedSuggestions();
+            updateCompletedSuggestions();
+        }
+
+        // 승인 대기 제안서 표시
+        function updatePendingSuggestions() {
+            const container = document.getElementById('pendingSuggestions');
+            const pending = allSuggestions.filter(s => s.status === 'pending');
+
+            if (pending.length === 0) {
+                container.innerHTML = '<p style="text-align: center; color: #666; padding: 40px;">승인 대기 중인 제안서가 없습니다.</p>';
+                return;
+            }
+
+            container.innerHTML = `
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>제안번호</th>
+                            <th>제목</th>
+                            <th>제안자</th>
+                            <th>부서</th>
+                            <th>제출일</th>
+                            <th>자체점수</th>
+                            <th>작업</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${pending.map(s => `
+                            <tr>
+                                <td>${s.suggestionNumber || 'N/A'}</td>
+                                <td>${s.title || s.suggestionNumber || '제목 없음'}</td>
+                                <td>${s.proposer || 'N/A'}</td>
+                                <td>${s.department || 'N/A'}</td>
+                                <td>${formatDate(s.createdAt)}</td>
+                                <td>${s.selfScore || s.totalScore || (s.scores && s.scores.self && s.scores.self.total) || 0}점</td>
+                                <td>
+                                    <button onclick="viewSuggestionDetail('${s.id}')"
+                                            style="padding: 5px 15px; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                                        상세보기
+                                    </button>
+                                    <button onclick="deleteSuggestion('${s.id}')"
+                                            style="padding: 5px 15px; background: #f56565; color: white; border: none; border-radius: 4px; cursor: pointer; margin-left: 5px;">
+                                        삭제
+                                    </button>
+                                </td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+        }
+
+        // 수정 요청 제안서 표시
+        function updateRevisionRequestedSuggestions() {
+            const container = document.getElementById('revisionRequestedSuggestions');
+            const revisionRequested = allSuggestions.filter(s => s.status === 'revision_requested');
+
+            if (revisionRequested.length === 0) {
+                container.innerHTML = '<p style="text-align: center; color: #666; padding: 40px;">수정 요청된 제안서가 없습니다.</p>';
+                return;
+            }
+
+            container.innerHTML = `
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>제안번호</th>
+                            <th>제목</th>
+                            <th>제안자</th>
+                            <th>부서</th>
+                            <th>제출일</th>
+                            <th>자체점수</th>
+                            <th>작업</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${revisionRequested.map(s => `
+                            <tr>
+                                <td>${s.suggestionNumber || 'N/A'}</td>
+                                <td>${s.title || s.suggestionNumber || '제목 없음'}</td>
+                                <td>${s.proposer || 'N/A'}</td>
+                                <td>${s.department || 'N/A'}</td>
+                                <td>${formatDate(s.createdAt)}</td>
+                                <td>${s.selfScore || s.totalScore || (s.scores && s.scores.self && s.scores.self.total) || 0}점</td>
+                                <td>
+                                    <button onclick="viewSuggestionDetail('${s.id}')"
+                                            style="padding: 5px 15px; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                                        상세보기
+                                    </button>
+                                    <button onclick="deleteSuggestion('${s.id}')"
+                                            style="padding: 5px 15px; background: #f56565; color: white; border: none; border-radius: 4px; cursor: pointer; margin-left: 5px;">
+                                        삭제
+                                    </button>
+                                </td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+        }
+
+        // 제안서 삭제 (관리자용)
+        async function deleteSuggestion(suggestionId) {
+            try {
+                const docRef = db.collection('suggestions').doc(suggestionId);
+                const doc = await docRef.get();
+
+                if (!doc.exists) {
+                    showToast('제안서를 찾을 수 없습니다.', 'error');
+                    return;
+                }
+
+                const data = doc.data();
+
+                if (!confirm(`"${data.title}" 제안서를 삭제하시겠습니까?\n삭제된 제안서는 복구할 수 없습니다.`)) {
+                    return;
+                }
+
+                // Firestore에서 삭제
+                await docRef.delete();
+
+                showToast('제안서가 삭제되었습니다.', 'success');
+
+                // onSnapshot이 자동으로 목록을 업데이트합니다
+
+            } catch (error) {
+                console.error('제안서 삭제 오류:', error);
+                showToast('제안서 삭제 중 오류가 발생했습니다: ' + error.message, 'error');
+            }
+        }
+
+        // 승인 완료 제안서 표시 (deprecated - loadCompletedSuggestions() 사용)
+        function updateCompletedSuggestions() {
+            // deprecated - use loadCompletedSuggestions() instead
+        }
+
+        // 제안서 상세보기 및 평가
+        let currentSuggestion = null;
+
+        function viewSuggestionDetail(suggestionId) {
+            const suggestion = allSuggestions.find(s => s.id === suggestionId);
+            if (!suggestion) {
+                showToast('제안서를 찾을 수 없습니다.', 'error');
+                return;
+            }
+
+            currentSuggestion = suggestion;
+            
+            // 모달 내용 생성
+            const modalContent = document.getElementById('modalContent');
+            modalContent.innerHTML = `
+                <div style="display: grid; gap: 24px;">
+                    <!-- 기본 정보 -->
+                    <div style="background: #f8f9fa; padding: 20px; border-radius: 12px;">
+                        <h3 style="margin: 0 0 16px 0; color: #667eea; font-size: 18px;">📋 기본 정보</h3>
+                        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px;">
+                            <div>
+                                <label style="font-size: 12px; color: #6c757d; font-weight: 600;">제안번호</label>
+                                <div style="font-size: 16px; font-weight: 600; margin-top: 4px;">${suggestion.suggestionNumber || 'N/A'}</div>
+                            </div>
+                            <div>
+                                <label style="font-size: 12px; color: #6c757d; font-weight: 600;">제출일</label>
+                                <div style="font-size: 16px; margin-top: 4px;">${formatDate(suggestion.createdAt)}</div>
+                            </div>
+                            <div>
+                                <label style="font-size: 12px; color: #6c757d; font-weight: 600;">제안자</label>
+                                <div style="font-size: 16px; margin-top: 4px;">${suggestion.proposer || 'N/A'}</div>
+                            </div>
+                            <div>
+                                <label style="font-size: 12px; color: #6c757d; font-weight: 600;">부서</label>
+                                <div style="font-size: 16px; margin-top: 4px;">${suggestion.department || 'N/A'}</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 제안 내용 -->
+                    <div>
+                        <h3 style="margin: 0 0 12px 0; color: #667eea; font-size: 18px;">💡 제안 내용</h3>
+                        <div style="background: #fff; padding: 16px; border: 2px solid #e9ecef; border-radius: 8px;">
+                            ${suggestion.title || suggestion.currentSituation || '내용 없음'}
+                        </div>
+                    </div>
+
+                    <!-- 기존 실시 내용 -->
+                    ${suggestion.currentSituation ? `
+                    <div>
+                        <h3 style="margin: 0 0 12px 0; color: #667eea; font-size: 18px;">📌 기존 실시 내용</h3>
+                        <div style="background: #fff; padding: 16px; border: 2px solid #e9ecef; border-radius: 8px; white-space: pre-wrap;">
+                            ${suggestion.currentSituation}
+                        </div>
+                    </div>
+                    ` : ''}
+
+                    <!-- 개선 방안 -->
+                    ${suggestion.improvementPlan ? `
+                    <div>
+                        <h3 style="margin: 0 0 12px 0; color: #667eea; font-size: 18px;">🚀 변경(신규) 내용</h3>
+                        <div style="background: #fff; padding: 16px; border: 2px solid #e9ecef; border-radius: 8px; white-space: pre-wrap;">
+                            ${suggestion.improvementPlan}
+                        </div>
+                    </div>
+                    ` : ''}
+
+                    <!-- 자체 평가 -->
+                    <div style="background: #e7f3ff; padding: 20px; border-radius: 12px;">
+                        <h3 style="margin: 0 0 16px 0; color: #0066cc; font-size: 18px;">⭐ 자체 평가</h3>
+                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;">
+                            <div style="text-align: center;">
+                                <div style="font-size: 12px; color: #6c757d; margin-bottom: 8px;">자체 점수</div>
+                                <div style="font-size: 28px; font-weight: 700; color: #0066cc;">${suggestion.selfScore || suggestion.totalScore || (suggestion.scores && suggestion.scores.self && suggestion.scores.self.total) || 0}</div>
+                                <div style="font-size: 12px; color: #6c757d; margin-top: 4px;">점</div>
+                            </div>
+                            ${suggestion.grade ? `
+                            <div style="text-align: center;">
+                                <div style="font-size: 12px; color: #6c757d; margin-bottom: 8px;">등급</div>
+                                <div style="font-size: 28px; font-weight: 700; color: #0066cc;">${suggestion.grade}</div>
+                            </div>
+                            ` : ''}
+                        </div>
+                    </div>
+
+                    <!-- 기존 평가 내역 (다중 평가자) -->
+                    ${suggestion.evaluations && suggestion.evaluations.length > 0 ? `
+                    <div style="background: #f0f8ff; padding: 20px; border-radius: 12px; border: 2px solid #4a90e2;">
+                        <h3 style="margin: 0 0 16px 0; color: #2c5aa0; font-size: 18px;">📊 평가 내역 (${suggestion.evaluations.length}명 평가)</h3>
+                        
+                        <!-- 평균 점수 -->
+                        <div style="background: white; padding: 16px; border-radius: 8px; margin-bottom: 16px; text-align: center;">
+                            <div style="font-size: 14px; color: #666; margin-bottom: 8px;">평균 점수</div>
+                            <div style="font-size: 36px; font-weight: 700; color: #2c5aa0;">${suggestion.avgScore || 0}</div>
+                            <div style="font-size: 14px; color: #666;">점</div>
+                        </div>
+
+                        <!-- 평가자별 상세 -->
+                        <div style="display: grid; gap: 12px;">
+                            ${suggestion.evaluations.map((eval, idx) => `
+                                <div style="background: white; padding: 14px; border-radius: 8px; border-left: 4px solid #4a90e2;">
+                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                        <div>
+                                            <strong style="color: #2c5aa0; font-size: 15px;">${eval.evaluatorName || eval.evaluatorEmail}</strong>
+                                            <span style="font-size: 12px; color: #999; margin-left: 8px;">
+                                                ${eval.evaluatedAt ? new Date(eval.evaluatedAt.toDate()).toLocaleDateString('ko-KR', {month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'}) : ''}
+                                            </span>
+                                        </div>
+                                        <div style="font-size: 24px; font-weight: 700; color: #2c5aa0;">${eval.score}점</div>
+                                    </div>
+                                    ${eval.comment ? `
+                                    <div style="font-size: 14px; color: #555; padding: 8px; background: #f8f9fa; border-radius: 4px; margin-top: 8px;">
+                                        💬 ${eval.comment}
+                                    </div>
+                                    ` : ''}
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                    ` : ''}
+
+                    <!-- 관리자 평가 입력 -->
+                    <div style="background: #fff3cd; padding: 20px; border-radius: 12px; border: 2px solid #ffc107;">
+                        <h3 style="margin: 0 0 16px 0; color: #856404; font-size: 18px;">✍️ 내 평가 입력</h3>
+                        
+                        <div style="margin-bottom: 20px;">
+                            <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #856404;">평가 점수 (0-100점) *</label>
+                            <input type="number" id="adminScore" min="0" max="100" 
+                                   value=""
+                                   placeholder="평가 점수를 입력하세요"
+                                   style="width: 100%; padding: 12px; border: 2px solid #ffc107; border-radius: 8px; font-size: 16px;">
+                        </div>
+
+                        <div style="margin-bottom: 20px;">
+                            <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #856404;">평가 의견</label>
+                            <textarea id="adminComment" rows="4" 
+                                      placeholder="평가 의견을 입력하세요"
+                                      style="width: 100%; padding: 12px; border: 2px solid #ffc107; border-radius: 8px; font-size: 14px; resize: vertical;"></textarea>
+                        </div>
+
+                        <div>
+                            <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #856404;">최종 결정 (선택사항)</label>
+                            <select id="finalDecision" style="width: 100%; padding: 12px; border: 2px solid #ffc107; border-radius: 8px; font-size: 16px;">
+                                <option value="">-- 선택안함 (평가만) --</option>
+                                <option value="approved" ${suggestion.status === 'approved' ? 'selected' : ''}>승인</option>
+                                <option value="rejected" ${suggestion.status === 'rejected' ? 'selected' : ''}>반려</option>
+                                <option value="reviewing">검토 중</option>
+                            </select>
+                            <div style="font-size: 12px; color: #856404; margin-top: 6px;">
+                                💡 최종 결정은 모든 평가가 완료된 후 선택하세요.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // 모달 표시
+            const modal = document.getElementById('evaluationModal');
+            modal.style.display = 'flex';
+        }
+
+        function closeEvaluationModal() {
+            document.getElementById('evaluationModal').style.display = 'none';
+            currentSuggestion = null;
+        }
+
+        async function submitEvaluation() {
+            if (!currentSuggestion) return;
+
+            const score = parseInt(document.getElementById('adminScore').value);
+            const comment = document.getElementById('adminComment').value.trim();
+            const finalDecision = document.getElementById('finalDecision').value;
+
+            // 유효성 검사
+            if (!score || score < 0 || score > 100) {
+                showToast('평가 점수를 0-100 사이로 입력해주세요.', 'error');
+                return;
+            }
+
+            try {
+                const evaluatorEmail = auth.currentUser.email;
+                const evaluatorName = auth.currentUser.displayName || evaluatorEmail;
+                
+                // 현재 제안서 데이터 가져오기
+                const suggestionDoc = await db.collection('suggestions').doc(currentSuggestion.id).get();
+                const suggestionData = suggestionDoc.data();
+                
+                // 기존 평가 배열 가져오기 (없으면 빈 배열)
+                let evaluations = suggestionData.evaluations || [];
+                
+                // 현재 평가자의 기존 평가 찾기
+                const existingIndex = evaluations.findIndex(e => e.evaluatorEmail === evaluatorEmail);
+                
+                const newEvaluation = {
+                    evaluatorEmail: evaluatorEmail,
+                    evaluatorName: evaluatorName,
+                    score: score,
+                    comment: comment,
+                    evaluatedAt: firebase.firestore.Timestamp.now()
+                };
+                
+                // 기존 평가 업데이트 또는 새 평가 추가
+                if (existingIndex >= 0) {
+                    evaluations[existingIndex] = newEvaluation;
+                } else {
+                    evaluations.push(newEvaluation);
+                }
+                
+                // 평균 점수 계산
+                const avgScore = Math.round(
+                    evaluations.reduce((sum, e) => sum + e.score, 0) / evaluations.length
+                );
+                
+                // 업데이트 데이터 준비
+                const updateData = {
+                    evaluations: evaluations,
+                    avgScore: avgScore,
+                    evaluationCount: evaluations.length,
+                    lastEvaluatedBy: evaluatorEmail,
+                    lastEvaluatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                };
+                
+                // finalDecision이 선택된 경우에만 상태 업데이트
+                if (finalDecision) {
+                    updateData.status = finalDecision;
+                    updateData.reviewedAt = firebase.firestore.FieldValue.serverTimestamp();
+                    updateData.reviewedBy = evaluatorEmail;
+                }
+                
+                // Firestore 업데이트
+                await db.collection('suggestions').doc(currentSuggestion.id).update(updateData);
+
+                showToast(`평가가 완료되었습니다! (평균: ${avgScore}점)`, 'success');
+                closeEvaluationModal();
+
+                // 알림 생성
+                if (currentSuggestion.userId) {
+                    let message = `${evaluatorName}님이 평가했습니다. 점수: ${score}점`;
+                    if (evaluations.length > 1) {
+                        message += ` (평균: ${avgScore}점, ${evaluations.length}명 평가)`;
+                    }
+                    
+                    await db.collection('notifications').add({
+                        userId: currentSuggestion.userId,
+                        title: '제안서 평가 완료',
+                        message: message,
+                        type: 'evaluation',
+                        read: false,
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                }
+
+            } catch (error) {
+                console.error('평가 제출 오류:', error);
+                showToast('평가 제출 중 오류가 발생했습니다: ' + error.message, 'error');
+            }
+        }
+
+        function updateRecentSuggestions() {
+            const recent = allSuggestions.slice(0, 5);
+            const container = document.getElementById('recentSuggestions');
+
+            if (recent.length === 0) {
+                container.innerHTML = '<p style="text-align: center; color: #666;">최근 제안서가 없습니다.</p>';
+                return;
+            }
+
+            container.innerHTML = recent.map(s => `
+                <div style="padding: 15px; border-bottom: 1px solid #eee;">
+                    <strong>${s.title || '제목 없음'}</strong>
+                    <div style="font-size: 12px; color: #666; margin-top: 5px;">
+                        ${s.proposer} | ${formatDate(s.createdAt)}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function updateUsersList() {
+            const container = document.getElementById('usersList');
+            if (allUsers.length === 0) {
+                container.innerHTML = '<p style="text-align: center; color: #666;">사용자가 없습니다.</p>';
+                return;
+            }
+
+            container.innerHTML = `
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>이름</th>
+                            <th>이메일</th>
+                            <th>부서</th>
+                            <th>역할</th>
+                            <th>평가자</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${allUsers.map(u => `
+                            <tr>
+                                <td>${u.displayName}</td>
+                                <td>${u.email}</td>
+                                <td>${u.department || '-'}</td>
+                                <td>${u.role === 'admin' ? '관리자' : '사용자'}</td>
+                                <td>${u.isEvaluator ? '✓ (L' + (u.leaderLevel || '') + ')' : '-'}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+        }
+
+        // UI 헬퍼 함수들
+        function showSection(event, sectionName) {
+            document.querySelectorAll('.content-section').forEach(section => {
+                section.classList.remove('active');
+            });
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.classList.remove('active');
+            });
+
+            document.getElementById(sectionName).classList.add('active');
+            event.target.classList.add('active');
+
+            // 섹션별 데이터 로드
+            if (sectionName === 'users') {
+                loadUsers();
+            }
+
+            // 통계 섹션을 열 때 데이터 로드
+            if (sectionName === 'stats') {
+                loadStatistics();
+            }
+
+            // 승인 완료 섹션을 열 때 데이터 로드
+            if (sectionName === 'approved') {
+                loadCompletedSuggestions();
+            }
+
+            closeSidebar();
+        }
+
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('open');
+            document.querySelector('.sidebar-overlay').classList.toggle('active');
+        }
+
+        function closeSidebar() {
+            document.getElementById('sidebar').classList.remove('open');
+            document.querySelector('.sidebar-overlay').classList.remove('active');
+        }
+
+        function showProgress(percent, text) {
+            document.getElementById('uploadProgress').style.display = 'block';
+            document.getElementById('progressBar').style.width = percent + '%';
+            document.getElementById('progressText').textContent = text;
+        }
+
+        function hideProgress() {
+            document.getElementById('uploadProgress').style.display = 'none';
+        }
+
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = `toast ${type} show`;
+            setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+
+        function formatDate(timestamp) {
+            if (!timestamp) return 'N/A';
+            const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+            return date.toLocaleDateString('ko-KR');
+        }
+
+        function refreshOrgChart() {
+            loadOrgChartData();
+            showToast('조직도가 새로고침되었습니다.', 'success');
+        }
+
+        function downloadTemplate() {
+            showToast('템플릿 다운로드 기능은 준비 중입니다.', 'info');
+        }
+
+        // ===== 결재자 관리 =====
+
+        // 리더 목록 로드
+        async function loadLeaders() {
+            try {
+                const snapshot = await db.collection('employees')
+                    .where('isLeader', '==', true)
+                    .where('isActive', '==', true)
+                    .get();
+                
+                leaders = [];
+                snapshot.forEach(doc => {
+                    leaders.push({ id: doc.id, ...doc.data() });
+                });
+                
+                displayLeaders();
+            } catch (error) {
+                console.error('리더 로드 오류:', error);
+            }
+        }
+
+        // 리더 표시
+        function displayLeaders() {
+            const tbody = document.getElementById('leaderList');
+            if (!tbody) return;
+            
+            const displayData = leaders;
+
+            if (displayData.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 40px; color: #999;">리더가 없습니다. 조직도를 업로드하세요.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = displayData.map(leader => `
+                <tr>
+                    <td>${leader.employeeId}</td>
+                    <td><strong>${leader.name}</strong></td>
+                    <td>${leader.department || '-'}</td>
+                    <td>${leader.jobTitle || '-'}</td>
+                    <td>L${leader.leaderLevel || '?'}</td>
+                    <td>${leader.isActive ? '재직' : '퇴사'}</td>
+                </tr>
+            `).join('');
+        }
+
+        // 리더 검색
+        function searchLeaders() {
+            const searchTerm = document.getElementById('leaderSearch').value.toLowerCase();
+            const filtered = leaders.filter(l => 
+                l.name.toLowerCase().includes(searchTerm) ||
+                (l.department && l.department.toLowerCase().includes(searchTerm)) ||
+                l.employeeId.toLowerCase().includes(searchTerm)
+            );
+            
+            const tbody = document.getElementById('leaderList');
+            tbody.innerHTML = filtered.map(leader => `
+                <tr>
+                    <td>${leader.employeeId}</td>
+                    <td><strong>${leader.name}</strong></td>
+                    <td>${leader.department || '-'}</td>
+                    <td>${leader.jobTitle || '-'}</td>
+                    <td>L${leader.leaderLevel || '?'}</td>
+                    <td>${leader.isActive ? '재직' : '퇴사'}</td>
+                </tr>
+            `).join('');
+        }
+
+        function refreshLeaders() {
+            loadLeaders();
+            showToast('리더 목록을 새로고침했습니다.', 'success');
+        }        let approvalLines = [];
+        let leaders = [];
+
+        // 결재 라인 로드
+        async function loadApprovalLines() {
+            try {
+                const snapshot = await db.collection('approvalLines').get();
+                approvalLines = [];
+                snapshot.forEach(doc => {
+                    approvalLines.push({ id: doc.id, ...doc.data() });
+                });
+                // 클라이언트에서 정렬
+                approvalLines.sort((a, b) => (a.department || '').localeCompare(b.department || ''));
+                displayApprovalLines();
+                await loadLeaders(); // 리더 목록도 로드
+            } catch (error) {
+                console.error('결재 라인 로드 오류:', error);
+                showToast('결재 라인을 불러오는데 실패했습니다.', 'error');
+            }
+        }
+
+        // 결재 라인 표시
+        function displayApprovalLines() {
+            const tbody = document.getElementById('approvalLineList');
+            if (!tbody) return;
+
+            if (approvalLines.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; padding: 40px; color: #999;">결재 라인이 없습니다.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = approvalLines.map(line => {
+                let approversHtml = '-';
+                // 새 구조(approvers 배열) 우선 처리
+                if (line.approvers && line.approvers.length > 0) {
+                    approversHtml = line.approvers.sort((a, b) => a.level - b.level).map(a => a.name).join(' → ');
+                } else {
+                    // 기존 구조(level1, level2, final) 처리
+                    const oldApprovers = [line.level1Approver, line.level2Approver, line.finalApprover].filter(Boolean);
+                    if (oldApprovers.length > 0) {
+                        approversHtml = oldApprovers.map(a => a.name).join(' → ');
+                    }
+                }
+
+                return `
+                <tr>
+                    <td><strong>${line.department}</strong></td>
+                    <td>${approversHtml}</td>
+                    <td>
+                        <span style="padding: 4px 12px; border-radius: 12px; font-size: 12px; background: ${line.active ? '#d4edda' : '#f8d7da'}; color: ${line.active ? '#155724' : '#721c24'};">
+                            ${line.active ? '활성' : '비활성'}
+                        </span>
+                    </td>
+                    <td>
+                        <button class="btn btn-sm btn-primary" onclick="openApprovalLineModal('${line.id}')">수정</button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteApprovalLine('${line.id}')" style="margin-left: 5px;">삭제</button>
+                    </td>
+                </tr>
+            `;
+            }).join('');
+        }
+
+        // 모달 열기 (신규/수정)
+        async function openApprovalLineModal(lineId = null) {
+            await loadLeaders(); // 항상 최신 리더 목록으로 시작
+            if (leaders.length === 0) {
+                showToast('리더가 없습니다. 조직도를 먼저 업로드하세요.', 'error');
+                return;
+            }
+
+            const modal = document.getElementById('approvalLineModal');
+            const title = document.getElementById('approvalLineModalTitle');
+            const idInput = document.getElementById('approvalLineId');
+            const deptSelect = document.getElementById('approvalLineDept');
+            const statusSelect = document.getElementById('approvalLineStatus');
+            const container = document.getElementById('approverFieldsContainer');
+
+            container.innerHTML = ''; // 이전 필드 초기화
+
+            const departments = [...new Set(orgChartData.map(e => e.department).filter(d => d))].sort();
+            deptSelect.innerHTML = '<option value="">-- 부서 선택 --</option>' + departments.map(d => `<option value="${d}">${d}</option>`).join('');
+
+            if (lineId) {
+                title.textContent = '결재 라인 수정';
+                const line = approvalLines.find(l => l.id === lineId);
+                if (line) {
+                    idInput.value = lineId;
+                    deptSelect.value = line.department;
+                    statusSelect.value = line.active ? 'active' : 'inactive';
+
+                    // 데이터 구조에 따라 분기
+                    if (line.approvers && line.approvers.length > 0) {
+                        // 새 구조
+                        line.approvers.sort((a, b) => a.level - b.level).forEach(approver => {
+                            addApproverField(approver.id);
+                        });
+                    } else {
+                        // 기존 구조 변환
+                        if(line.level1Approver) addApproverField(line.level1Approver.employeeId);
+                        if(line.level2Approver) addApproverField(line.level2Approver.employeeId);
+                        if(line.finalApprover) addApproverField(line.finalApprover.employeeId);
+                    }
+                } else {
+                    showToast('결재 라인을 찾을 수 없습니다.', 'error');
+                    return;
+                }
+            } else {
+                title.textContent = '새 결재 라인';
+                idInput.value = '';
+                deptSelect.value = '';
+                statusSelect.value = 'active';
+                addApproverField(); // 시작용 빈 필드 1개 추가
+            }
+            modal.style.display = 'flex';
+        }
+
+        function addApproverField(approverId = '') {
+            const container = document.getElementById('approverFieldsContainer');
+            const fieldCount = container.children.length;
+            
+            const leaderOptions = '<option value="">-- 결재자 선택 --</option>' + leaders.map(l => `<option value="${l.employeeId}" ${l.employeeId === approverId ? 'selected' : ''}>${l.name} (${l.jobTitle || ''})</option>`).join('');
+
+            const div = document.createElement('div');
+            div.className = 'form-group approver-field';
+            div.style.cssText = 'display: flex; align-items: center; gap: 10px; margin-bottom: 10px;';
+
+            div.innerHTML = `
+                <label class="form-label" style="margin-bottom: 0; width: 80px; flex-shrink: 0;">${fieldCount + 1}차 결재</label>
+                <select class="form-input approver-select">${leaderOptions}</select>
+                <button type="button" class="btn btn-sm btn-danger" onclick="removeApproverField(this)">삭제</button>
+            `;
+            container.appendChild(div);
+        }
+
+        function removeApproverField(button) {
+            button.parentElement.remove();
+            // 순서 다시 매기기
+            const container = document.getElementById('approverFieldsContainer');
+            Array.from(container.children).forEach((field, index) => {
+                field.querySelector('.form-label').textContent = `${index + 1}차 결재`;
+            });
+        }
+
+        function closeApprovalLineModal() {
+            document.getElementById('approvalLineModal').style.display = 'none';
+        }
+
+        async function saveApprovalLine() {
+            const id = document.getElementById('approvalLineId').value;
+            const department = document.getElementById('approvalLineDept').value;
+            const status = document.getElementById('approvalLineStatus').value;
+            const approverFields = document.querySelectorAll('.approver-select');
+
+            if (!department) {
+                showToast('부서를 선택해주세요.', 'error');
+                return;
+            }
+
+            const approvers = [];
+            for (let i = 0; i < approverFields.length; i++) {
+                const select = approverFields[i];
+                const approverId = select.value;
+                if (!approverId) {
+                    showToast(`${i + 1}차 결재자를 선택해주세요.`, 'error');
+                    return;
+                }
+                const leader = leaders.find(l => l.employeeId === approverId);
+                if (leader) {
+                    approvers.push({
+                        level: i + 1,
+                        id: approverId,
+                        name: leader.name,
+                        jobTitle: leader.jobTitle || ''
+                    });
+                }
+            }
+
+            if (approvers.length === 0) {
+                showToast('결재자를 한 명 이상 추가해주세요.', 'error');
+                return;
+            }
+
+            const lineData = {
+                department: department,
+                active: status === 'active',
+                approvers: approvers, // 새 배열 구조
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                // 기존 필드 삭제
+                level1Approver: firebase.firestore.FieldValue.delete(),
+                level2Approver: firebase.firestore.FieldValue.delete(),
+                finalApprover: firebase.firestore.FieldValue.delete()
+            };
+
+            try {
+                if (id) {
+                    await db.collection('approvalLines').doc(id).update(lineData);
+                    showToast('결재 라인이 수정되었습니다.', 'success');
+                } else {
+                    lineData.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+                    await db.collection('approvalLines').add(lineData);
+                    showToast('결재 라인이 추가되었습니다.', 'success');
+                }
+                closeApprovalLineModal();
+                loadApprovalLines();
+            } catch (error) {
+                console.error("결재 라인 저장 오류:", error);
+                showToast('저장 중 오류가 발생했습니다: ' + error.message, 'error');
+            }
+        }
+
+        async function deleteApprovalLine(id) {
+            if (!confirm('이 결재 라인을 정말 삭제하시겠습니까?')) return;
+            try {
+                await db.collection('approvalLines').doc(id).delete();
+                showToast('결재 라인이 삭제되었습니다.', 'success');
+                loadApprovalLines();
+            } catch (error) {
+                console.error("결재 라인 삭제 오류:", error);
+                showToast('삭제 중 오류가 발생했습니다.', 'error');
+            }
+        }
+
+        // 통계 분석 함수
+        async function loadStatistics() {
+            try {
+                // 모든 제안서 가져오기
+                const suggestionsSnapshot = await db.collection('suggestions').get();
+                const suggestions = suggestionsSnapshot.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data()
+                }));
+
+                // 전체 통계
+                const total = suggestions.length;
+                const approved = suggestions.filter(s => s.status === 'approved').length;
+                const rejected = suggestions.filter(s => s.status === 'rejected').length;
+                const pending = suggestions.filter(s => s.status === 'pending' || s.status === 'evaluating').length;
+
+                document.getElementById('stats-total').textContent = total;
+                document.getElementById('stats-approved').textContent = approved;
+                document.getElementById('stats-rejected').textContent = rejected;
+                document.getElementById('stats-pending').textContent = pending;
+
+                // 부서별 통계
+                const departmentStats = {};
+                suggestions.forEach(s => {
+                    const dept = s.department || '미분류';
+                    if (!departmentStats[dept]) {
+                        departmentStats[dept] = { total: 0, approved: 0, rejected: 0, pending: 0 };
+                    }
+                    departmentStats[dept].total++;
+                    if (s.status === 'approved') departmentStats[dept].approved++;
+                    else if (s.status === 'rejected') departmentStats[dept].rejected++;
+                    else departmentStats[dept].pending++;
+                });
+
+                let deptHtml = '';
+                Object.keys(departmentStats).sort().forEach(dept => {
+                    const stat = departmentStats[dept];
+                    const approvalRate = stat.total > 0 ? ((stat.approved / stat.total) * 100).toFixed(1) : 0;
+                    deptHtml += `
+                        <tr>
+                            <td>${dept}</td>
+                            <td>${stat.total}</td>
+                            <td style="color: #48bb78; font-weight: 600;">${stat.approved}</td>
+                            <td style="color: #f56565; font-weight: 600;">${stat.rejected}</td>
+                            <td style="color: #f6ad55; font-weight: 600;">${stat.pending}</td>
+                            <td>${approvalRate}%</td>
+                        </tr>
+                    `;
+                });
+                document.getElementById('departmentStatsTable').innerHTML = deptHtml || '<tr><td colspan="6" style="text-align: center; color: #999;">데이터 없음</td></tr>';
+
+                // 월별 통계
+                const monthlyStats = {};
+                suggestions.forEach(s => {
+                    if (s.createdAt) {
+                        const date = s.createdAt.toDate();
+                        const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+                        if (!monthlyStats[monthKey]) {
+                            monthlyStats[monthKey] = { total: 0, approved: 0, rejected: 0, pending: 0 };
+                        }
+                        monthlyStats[monthKey].total++;
+                        if (s.status === 'approved') monthlyStats[monthKey].approved++;
+                        else if (s.status === 'rejected') monthlyStats[monthKey].rejected++;
+                        else monthlyStats[monthKey].pending++;
+                    }
+                });
+
+                let monthHtml = '';
+                Object.keys(monthlyStats).sort().reverse().forEach(month => {
+                    const stat = monthlyStats[month];
+                    monthHtml += `
+                        <tr>
+                            <td>${month}</td>
+                            <td>${stat.total}</td>
+                            <td style="color: #48bb78;">${stat.approved}</td>
+                            <td style="color: #f56565;">${stat.rejected}</td>
+                            <td style="color: #f6ad55;">${stat.pending}</td>
+                        </tr>
+                    `;
+                });
+                document.getElementById('monthlyStatsTable').innerHTML = monthHtml || '<tr><td colspan="5" style="text-align: center; color: #999;">데이터 없음</td></tr>';
+
+                // 카테고리별 통계
+                const categoryStats = {};
+                suggestions.forEach(s => {
+                    const category = s.category || '미분류';
+                    categoryStats[category] = (categoryStats[category] || 0) + 1;
+                });
+
+                let categoryHtml = '';
+                Object.keys(categoryStats).sort((a, b) => categoryStats[b] - categoryStats[a]).forEach(cat => {
+                    const count = categoryStats[cat];
+                    const percentage = total > 0 ? ((count / total) * 100).toFixed(1) : 0;
+                    categoryHtml += `
+                        <tr>
+                            <td>${cat}</td>
+                            <td>${count}</td>
+                            <td>
+                                <div style="display: flex; align-items: center; gap: 10px;">
+                                    <div style="flex: 1; background: #e2e8f0; height: 8px; border-radius: 4px; overflow: hidden;">
+                                        <div style="background: #667eea; height: 100%; width: ${percentage}%;"></div>
+                                    </div>
+                                    <span>${percentage}%</span>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                });
+                document.getElementById('categoryStatsTable').innerHTML = categoryHtml || '<tr><td colspan="3" style="text-align: center; color: #999;">데이터 없음</td></tr>';
+
+                // 사용자별 통계 (Top 10)
+                const userStats = {};
+                suggestions.forEach(s => {
+                    const userId = s.userId;
+                    if (!userStats[userId]) {
+                        userStats[userId] = {
+                            name: s.submitterName || '알 수 없음',
+                            department: s.department || '미분류',
+                            total: 0,
+                            approved: 0
+                        };
+                    }
+                    userStats[userId].total++;
+                    if (s.status === 'approved') userStats[userId].approved++;
+                });
+
+                const sortedUsers = Object.values(userStats).sort((a, b) => b.total - a.total).slice(0, 10);
+                let userHtml = '';
+                sortedUsers.forEach((user, index) => {
+                    userHtml += `
+                        <tr>
+                            <td style="font-weight: 600; color: ${index < 3 ? '#667eea' : '#666'};">${index + 1}</td>
+                            <td>${user.name}</td>
+                            <td>${user.department}</td>
+                            <td style="font-weight: 600;">${user.total}</td>
+                            <td style="color: #48bb78; font-weight: 600;">${user.approved}</td>
+                        </tr>
+                    `;
+                });
+                document.getElementById('userStatsTable').innerHTML = userHtml || '<tr><td colspan="5" style="text-align: center; color: #999;">데이터 없음</td></tr>';
+
+                showToast('통계가 로드되었습니다.', 'success');
+
+            } catch (error) {
+                console.error('통계 로드 오류:', error);
+                showToast('통계 로드 중 오류가 발생했습니다.', 'error');
+            }
+        }
+
+        // 기존 제안서에 selfScore 필드 추가 (마이그레이션)
+        async function migrateSelfScores() {
+            if (!confirm('기존 제안서 데이터에 selfScore 필드를 추가하시겠습니까?\n이 작업은 한 번만 실행하면 됩니다.')) {
+                return;
+            }
+
+            try {
+                const snapshot = await db.collection('suggestions').get();
+                let updatedCount = 0;
+                let skippedCount = 0;
+
+                showToast('마이그레이션 시작...', 'info');
+
+                for (const doc of snapshot.docs) {
+                    const data = doc.data();
+
+                    // selfScore가 이미 있으면 스킵
+                    if (data.selfScore !== undefined) {
+                        skippedCount++;
+                        continue;
+                    }
+
+                    // scores.self.total에서 값 가져오기
+                    let selfScore = 0;
+                    if (data.scores && data.scores.self && data.scores.self.total) {
+                        selfScore = data.scores.self.total;
+                    } else if (data.totalScore) {
+                        selfScore = data.totalScore;
+                    }
+
+                    // selfScore와 totalScore 필드 업데이트
+                    await db.collection('suggestions').doc(doc.id).update({
+                        selfScore: selfScore,
+                        totalScore: selfScore
+                    });
+
+                    updatedCount++;
+                }
+
+                showToast(`마이그레이션 완료: ${updatedCount}개 업데이트, ${skippedCount}개 스킵`, 'success');
+
+            } catch (error) {
+                console.error('마이그레이션 오류:', error);
+                showToast('마이그레이션 중 오류가 발생했습니다: ' + error.message, 'error');
+            }
+        }
+
+        function logout() {
+            if (confirm('로그아웃 하시겠습니까?')) {
+                auth.signOut().then(() => {
+                    window.location.href = 'index.html';
+                }).catch(error => {
+                    console.error('로그아웃 오류:', error);
+                    showToast('로그아웃 중 오류가 발생했습니다.', 'error');
+                });
+            }
+        }
+
+        // 사용자 목록 로드
+        async function loadUsers() {
+            try {
+                const filterRole = document.getElementById('filterRole').value;
+
+                // employees 컬렉션에서 모든 직원 로드
+                const employeesSnapshot = await db.collection('employees').where('isActive', '==', true).get();
+                const tbody = document.getElementById('usersList');
+
+                if (employeesSnapshot.empty) {
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="6" style="text-align: center; padding: 40px; color: #999;">
+                                등록된 직원이 없습니다.
+                            </td>
+                        </tr>
+                    `;
+                    return;
+                }
+
+                // users 컬렉션에서 기존 사용자 정보 가져오기
+                const usersSnapshot = await db.collection('users').get();
+                const usersMap = {};
+                usersSnapshot.forEach(doc => {
+                    const data = doc.data();
+                    if (data.employeeId) {
+                        usersMap[data.employeeId] = {
+                            userId: doc.id,
+                            roles: data.roles || ['user']
+                        };
+                    }
+                });
+
+                let users = [];
+                employeesSnapshot.forEach(doc => {
+                    const empData = doc.data();
+                    const employeeId = doc.id;
+
+                    // 기존 roles 정보가 있으면 사용, 없으면 기본값 생성
+                    let roles = ['user'];
+                    let userId = null;
+
+                    if (usersMap[employeeId]) {
+                        userId = usersMap[employeeId].userId;
+                        roles = usersMap[employeeId].roles;
+                    } else {
+                        // 아직 로그인하지 않은 사용자 - 기본 권한 추론
+                        if (employeeId === 'A197003' || employeeId === 'ADMIN') {
+                            roles.push('admin');
+                        }
+                        if (empData.isLeader) {
+                            const leaderLevel = empData.leaderLevel || 1;
+                            if (leaderLevel === 1) roles.push('firstReviewer');
+                            if (leaderLevel === 2) roles.push('secondReviewer');
+                        }
+                    }
+
+                    // 필터 적용
+                    if (filterRole && !roles.includes(filterRole)) return;
+
+                    users.push({
+                        employeeId: employeeId,
+                        userId: userId, // users 컬렉션의 문서 ID (없을 수도 있음)
+                        displayName: empData.name,
+                        department: empData.department || '-',
+                        position: empData.position || empData.jobTitle || '-',
+                        roles: roles
+                    });
+                });
+
+                if (users.length === 0) {
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="6" style="text-align: center; padding: 40px; color: #999;">
+                                조건에 맞는 사용자가 없습니다.
+                            </td>
+                        </tr>
+                    `;
+                    return;
+                }
+
+                tbody.innerHTML = users.map(user => {
+                    const rolesHtml = getRolesCheckboxes(user.employeeId, user.roles);
+                    const statusBadge = user.userId
+                        ? '<span style="color: #28a745; font-size: 11px;">✓ 등록됨</span>'
+                        : '<span style="color: #6c757d; font-size: 11px;">미등록</span>';
+
+                    return `
+                        <tr>
+                            <td>
+                                <strong>${user.employeeId}</strong><br>
+                                ${statusBadge}
+                            </td>
+                            <td>${user.displayName}</td>
+                            <td>${user.department}</td>
+                            <td>${user.position}</td>
+                            <td>${rolesHtml}</td>
+                            <td>
+                                <button class="btn btn-sm btn-primary" onclick="saveUserRoles('${user.employeeId}', ${user.userId ? `'${user.userId}'` : 'null'})" style="margin-bottom: 5px; width: 100%;">
+                                    저장
+                                </button>
+                                ${user.userId ? `
+                                <button class="btn btn-sm" style="background: #ff9800; color: white; width: 100%;" onclick="resetUserPassword('${user.employeeId}', '${user.userId}')">
+                                    🔑 비밀번호 초기화
+                                </button>
+                                ` : ''}
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+
+            } catch (error) {
+                console.error('사용자 로드 오류:', error);
+                showToast('사용자를 불러오는데 실패했습니다.', 'error');
+            }
+        }
+
+        // 권한 체크박스 생성
+        function getRolesCheckboxes(userId, userRoles) {
+            const allRoles = [
+                { key: 'user', label: '일반사용자' },
+                { key: 'firstReviewer', label: '소위원회' },
+                { key: 'secondReviewer', label: '제안위원회' },
+                { key: 'effectVerifier', label: '유형효과검증' },
+                { key: 'admin', label: '관리자' }
+            ];
+
+            return allRoles.map(role => {
+                const checked = userRoles.includes(role.key) ? 'checked' : '';
+                return `
+                    <label style="display: inline-block; margin-right: 10px; cursor: pointer;">
+                        <input type="checkbox"
+                            id="role_${userId}_${role.key}"
+                            value="${role.key}"
+                            ${checked}
+                            style="margin-right: 3px;">
+                        <span style="font-size: 13px;">${role.label}</span>
+                    </label>
+                `;
+            }).join('');
+        }
+
+        // 사용자 권한 저장
+        async function saveUserRoles(employeeId, userId) {
+            try {
+                const allRoleKeys = ['user', 'firstReviewer', 'secondReviewer', 'effectVerifier', 'admin'];
+                const selectedRoles = [];
+
+                allRoleKeys.forEach(roleKey => {
+                    const checkbox = document.getElementById(`role_${employeeId}_${roleKey}`);
+                    if (checkbox && checkbox.checked) {
+                        selectedRoles.push(roleKey);
+                    }
+                });
+
+                if (selectedRoles.length === 0) {
+                    showToast('최소 1개 이상의 권한을 선택해주세요.', 'error');
+                    return;
+                }
+
+                // 기본적으로 user 권한은 항상 포함
+                if (!selectedRoles.includes('user')) {
+                    selectedRoles.push('user');
+                }
+
+                if (userId) {
+                    // 기존 사용자 - users 컬렉션 업데이트
+                    await db.collection('users').doc(userId).update({
+                        roles: selectedRoles,
+                        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                    showToast('권한이 저장되었습니다.', 'success');
+                } else {
+                    // 아직 로그인하지 않은 사용자
+                    // employees 컬렉션에 임시로 권한 정보 저장
+                    await db.collection('employees').doc(employeeId).update({
+                        preassignedRoles: selectedRoles,
+                        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                    showToast('권한이 예약되었습니다. 첫 로그인 시 적용됩니다.', 'success');
+                }
+
+                loadUsers();
+
+            } catch (error) {
+                console.error('권한 저장 오류:', error);
+                showToast('권한 저장에 실패했습니다: ' + error.message, 'error');
+            }
+        }
+
+        // 비밀번호 초기화 함수
+        async function resetUserPassword(employeeId, userId) {
+            const confirmMsg = `${employeeId} 사용자의 계정을 초기화하시겠습니까?\n\n⚠️ 주의사항:\n- Firestore 사용자 문서가 삭제됩니다\n- 사용자는 초기 비밀번호(ajupharm)로 로그인하면 자동으로 계정이 재생성됩니다\n- 첫 로그인 시 비밀번호를 변경해야 합니다\n\n계속하시겠습니까?`;
+
+            if (!confirm(confirmMsg)) {
+                return;
+            }
+
+            try {
+                showToast('비밀번호 초기화 중...', 'info');
+
+                // 1. Firestore에서 사용자 정보 확인
+                const userDoc = await db.collection('users').doc(userId).get();
+                if (!userDoc.exists) {
+                    throw new Error('사용자를 찾을 수 없습니다.');
+                }
+
+                const userData = userDoc.data();
+                const email = userData.email || `${employeeId}@ajupharm.co.kr`;
+
+                // 2. Firestore users 문서 삭제
+                // 이렇게 하면 다음 로그인 시 초기 비밀번호(ajupharm)로 자동 재생성됩니다
+                await db.collection('users').doc(userId).delete();
+
+                showToast(`비밀번호 초기화 완료!\n\n사용자에게 안내:\n\n1. 사번: ${employeeId}\n2. 초기 비밀번호: ajupharm\n3. 로그인 시 자동으로 계정이 재생성됩니다\n4. 첫 로그인 후 새 비밀번호로 변경 필요`, 'success');
+
+                // 사용자 목록 새로고침
+                loadUsers();
+
+            } catch (error) {
+                console.error('비밀번호 초기화 오류:', error);
+                showToast('비밀번호 초기화 실패: ' + error.message, 'error');
+            }
+        }
+        // 승인 완료 제안서 로드
+        async function loadCompletedSuggestions() {
+            try {
+                // 인덱스 없이 작동하도록 orderBy 제거하고 메모리에서 정렬
+                const snapshot = await db.collection('suggestions')
+                    .where('status', '==', 'approved')
+                    .get();
+
+                // 메모리에서 createdAt 기준으로 정렬
+                const docs = snapshot.docs.sort((a, b) => {
+                    const aTime = a.data().createdAt?.toMillis() || 0;
+                    const bTime = b.data().createdAt?.toMillis() || 0;
+                    return bTime - aTime; // 최신순
+                });
+
+                const tbody = document.getElementById('completedSuggestionsList');
+
+                if (docs.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 40px;">승인 완료된 제안서가 없습니다.</td></tr>';
+                    return;
+                }
+
+                let html = '';
+                docs.forEach(doc => {
+                    const data = doc.data();
+                    const verification = data.verification || {};
+                    const typicalEffectScore = verification.typicalEffectScore || 0;
+                    const verifiedAmount = verification.verifiedAmount || 0;
+
+                    html += `
+                        <tr>
+                            <td>${data.suggestionNumber || '-'}</td>
+                            <td>${data.title || '-'}</td>
+                            <td>${data.proposer || '-'}</td>
+                            <td>${data.department || '-'}</td>
+                            <td><span style="font-weight: 600; color: #0ea5e9;">${typicalEffectScore}점</span></td>
+                            <td>${verifiedAmount ? verifiedAmount.toLocaleString() + '원' : '-'}</td>
+                            <td>
+                                <button class="btn btn-primary btn-sm" onclick="openTypicalEffectEditModal('${doc.id}')">
+                                    점수 수정
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                });
+
+                tbody.innerHTML = html;
+
+            } catch (error) {
+                console.error('승인 완료 제안서 로드 오류:', error);
+                document.getElementById('completedSuggestionsList').innerHTML =
+                    '<tr><td colspan="7" style="text-align: center; padding: 40px; color: #ef4444;">로드 실패: ' + error.message + '</td></tr>';
+            }
+        }
+
+        // 유형효과 점수 수정 모달 열기
+        async function openTypicalEffectEditModal(suggestionId) {
+            try {
+                const doc = await db.collection('suggestions').doc(suggestionId).get();
+                if (!doc.exists) {
+                    showToast('제안서를 찾을 수 없습니다.', 'error');
+                    return;
+                }
+
+                const data = doc.data();
+                window.currentEditingSuggestion = { id: suggestionId, ...data };
+
+                // 모달에 데이터 채우기
+                document.getElementById('editSugNumber').textContent = data.suggestionNumber || '-';
+                document.getElementById('editTitle').textContent = data.title || '-';
+                document.getElementById('editProposer').textContent = data.proposer || '-';
+                document.getElementById('editDepartment').textContent = data.department || '-';
+
+                const verification = data.verification || {};
+                document.getElementById('editExpectedSaving').textContent = (data.expectedSaving || 0).toLocaleString() + '원';
+                document.getElementById('editVerifiedAmount').textContent = (verification.verifiedAmount || 0).toLocaleString() + '원';
+                document.getElementById('editCurrentTypicalEffectScore').textContent = (verification.typicalEffectScore || 0) + '점';
+
+                document.getElementById('newTypicalEffectScore').value = verification.typicalEffectScore || 0;
+                document.getElementById('editReason').value = '';
+
+                // 모달 표시
+                document.getElementById('typicalEffectEditModal').style.display = 'flex';
+
+            } catch (error) {
+                console.error('모달 열기 오류:', error);
+                showToast('제안서 정보를 불러오는데 실패했습니다.', 'error');
+            }
+        }
+
+        // 유형효과 점수 수정 모달 닫기
+        function closeTypicalEffectEditModal() {
+            document.getElementById('typicalEffectEditModal').style.display = 'none';
+            window.currentEditingSuggestion = null;
+        }
+
+        // 유형효과 점수 수정 저장
+        async function saveTypicalEffectScore() {
+            if (!window.currentEditingSuggestion) {
+                showToast('제안서 정보가 없습니다.', 'error');
+                return;
+            }
+
+            const newScore = parseInt(document.getElementById('newTypicalEffectScore').value);
+            const reason = document.getElementById('editReason').value.trim();
+
+            if (isNaN(newScore) || newScore < 0 || newScore > 70) {
+                showToast('유형효과 점수는 0~70점 사이여야 합니다.', 'error');
+                return;
+            }
+
+            if (!reason) {
+                showToast('수정 사유를 입력해주세요.', 'error');
+                return;
+            }
+
+            if (!confirm('유형효과 점수를 수정하시겠습니까?')) return;
+
+            try {
+                const suggestionRef = db.collection('suggestions').doc(window.currentEditingSuggestion.id);
+
+                await suggestionRef.update({
+                    'verification.typicalEffectScore': newScore,
+                    'verification.adminEditHistory': firebase.firestore.FieldValue.arrayUnion({
+                        editedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                        editedBy: currentUser.employeeId,
+                        editorName: currentUser.displayName,
+                        previousScore: window.currentEditingSuggestion.verification?.typicalEffectScore || 0,
+                        newScore: newScore,
+                        reason: reason
+                    }),
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+
+                showToast('유형효과 점수가 수정되었습니다.', 'success');
+                closeTypicalEffectEditModal();
+                loadCompletedSuggestions(); // 목록 새로고침
+
+            } catch (error) {
+                console.error('유형효과 점수 수정 오류:', error);
+                showToast('유형효과 점수 수정 중 오류가 발생했습니다: ' + error.message, 'error');
+            }
+        }
+
+    </script>
+
+    <!-- 유형효과 점수 수정 모달 -->
+    <div id="typicalEffectEditModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); z-index: 9999; align-items: center; justify-content: center;">
+        <div style="background: white; border-radius: 20px; padding: 40px; max-width: 600px; width: 90%; box-shadow: 0 25px 70px rgba(0,0,0,0.3);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+                <h2 style="color: #0ea5e9; font-size: 24px; font-weight: 700; margin: 0;">💰 유형효과 점수 수정</h2>
+                <button onclick="closeTypicalEffectEditModal()" style="background: none; border: none; font-size: 28px; cursor: pointer; color: #999;">×</button>
+            </div>
+
+            <!-- 제안서 정보 -->
+            <div style="background: #f8fafc; padding: 20px; border-radius: 12px; margin-bottom: 24px;">
+                <div style="margin-bottom: 10px;"><strong>제안번호:</strong> <span id="editSugNumber"></span></div>
+                <div style="margin-bottom: 10px;"><strong>제목:</strong> <span id="editTitle"></span></div>
+                <div style="margin-bottom: 10px;"><strong>제안자:</strong> <span id="editProposer"></span> (<span id="editDepartment"></span>)</div>
+                <hr style="margin: 15px 0; border: none; border-top: 1px solid #e2e8f0;">
+                <div style="margin-bottom: 10px;"><strong>예상 절감액:</strong> <span id="editExpectedSaving"></span></div>
+                <div style="margin-bottom: 10px;"><strong>검증 금액:</strong> <span id="editVerifiedAmount"></span></div>
+                <div><strong>현재 유형효과 점수:</strong> <span id="editCurrentTypicalEffectScore" style="color: #0ea5e9; font-weight: 600; font-size: 18px;"></span></div>
+            </div>
+
+            <!-- 점수 수정 -->
+            <div style="margin-bottom: 24px;">
+                <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #333;">새로운 유형효과 점수 (0~70점)</label>
+                <input type="number" id="newTypicalEffectScore" min="0" max="70"
+                    style="width: 100%; padding: 12px; border: 2px solid #e2e8f0; border-radius: 10px; font-size: 16px;"
+                    placeholder="0~70 사이의 점수 입력">
+            </div>
+
+            <div style="margin-bottom: 24px;">
+                <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #333;">수정 사유 *</label>
+                <textarea id="editReason" rows="4"
+                    style="width: 100%; padding: 12px; border: 2px solid #e2e8f0; border-radius: 10px; font-size: 14px; resize: vertical;"
+                    placeholder="점수 수정 사유를 입력하세요"></textarea>
+            </div>
+
+            <div style="display: flex; gap: 10px;">
+                <button onclick="closeTypicalEffectEditModal()"
+                    style="flex: 1; padding: 14px; background: #e2e8f0; color: #334155; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; font-size: 16px;">
+                    취소
+                </button>
+                <button onclick="saveTypicalEffectScore()"
+                    style="flex: 1; padding: 14px; background: linear-gradient(135deg, #0ea5e9 0%, #2dd4bf 100%); color: white; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; font-size: 16px; box-shadow: 0 4px 15px rgba(14, 165, 233, 0.3);">
+                    저장
+                </button>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

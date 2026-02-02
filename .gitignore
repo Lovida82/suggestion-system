@@ -1,0 +1,30 @@
+# Environment variables
+.env
+.env.local
+
+# Node modules
+node_modules/
+
+# Netlify
+.netlify/
+
+# Build output
+dist/
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temp folders
+tmpclaude-*
+_ul*
+
+# Claude Code local settings
+.claude/
+
+# Binary files
+*.docx
