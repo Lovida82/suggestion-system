@@ -1,8 +1,8 @@
 # Claude Code 참고 문서 - 아주약품 제안제도 시스템
 
-**최종 업데이트:** 2026-01-20 (점수 체계 문서 업데이트)
+**최종 업데이트:** 2026-02-02 (리더/사용자 페이지 통합, 결재 흐름 개선)
 **프로젝트:** suggestion-system_251020_V3_multiuser
-**버전:** 3.2.0
+**버전:** 3.3.0
 **상태:** 운영 가능 (Production Ready)
 
 ---
@@ -52,9 +52,9 @@
 
 ```
 suggestion-system_251020_V3_multiuser/
-├── index.html              # 로그인/회원가입 페이지
-├── dashboard.html          # 일반 사용자 대시보드 (제안서 작성/조회)
-├── leader.html             # 리더 대시보드 (1차/2차/3차 평가)
+├── index.html              # 로그인/회원가입 페이지 (Caps Lock 경고 포함)
+├── dashboard.html          # 통합 대시보드 (일반 사용자 + 리더 평가 기능)
+├── leader.html             # [DEPRECATED] 리더 대시보드 (백업용 유지)
 ├── verifier.html           # 유형효과 검증 담당자 대시보드
 ├── admin.html              # 관리자 대시보드 (시스템 관리)
 ├── add-admin.html          # 관리자 추가 페이지
@@ -69,7 +69,8 @@ suggestion-system_251020_V3_multiuser/
 ├── dist/                   # 빌드 출력 디렉토리
 ├── README.md               # 시스템 사용 가이드
 ├── PRD.md                  # 제품 요구사항 문서
-└── CHANGELOG.md            # 변경 이력
+├── CHANGELOG.md            # 변경 이력
+└── 결재흐름_설계문서.md      # 결재 흐름 설계 문서 (2026-02-02)
 ```
 
 ---
@@ -116,26 +117,27 @@ const firebaseConfig = {
 | 권한 | 설명 | 접근 페이지 |
 |------|------|------------|
 | `user` | 일반 사용자 (제안서 작성) | dashboard.html |
-| `firstReviewer` | 1차 평가자 | leader.html |
-| `secondReviewer` | 2차 평가자 | leader.html |
-| `thirdReviewer` | 3차 평가자 | leader.html |
+| `firstReviewer` | 1차 평가자 | dashboard.html (평가 기능 포함) |
+| `secondReviewer` | 2차 평가자 | dashboard.html (평가 기능 포함) |
+| `thirdReviewer` | 3차 평가자 | dashboard.html (평가 기능 포함) |
 | `effectVerifier` | 유형효과 검증 담당자 | verifier.html |
 | `admin` | 시스템 관리자 | admin.html |
 
-### 5.2 로그인 후 페이지 리다이렉트 우선순위
+### 5.2 로그인 후 페이지 리다이렉트 우선순위 (2026-02-02 변경)
 1. `admin` → admin.html
-2. `effectVerifier` → verifier.html (현재 leader.html로 통합)
-3. `firstReviewer` / `secondReviewer` / `thirdReviewer` → leader.html
-4. `user` → dashboard.html
+2. 기타 모든 사용자 → dashboard.html (리더 포함)
+
+> **변경사항**: 리더(1차/2차/3차 평가자)도 dashboard.html 사용. 권한에 따라 메뉴가 다르게 표시됨.
 
 ### 5.3 권한 결정 로직 (index.html)
 ```javascript
 function redirectBasedOnRoles(userData) {
     const roles = userData.roles;
-    if (roles.includes('admin')) { window.location.href = 'admin.html'; return; }
-    if (roles.includes('firstReviewer') || roles.includes('secondReviewer') || roles.includes('thirdReviewer')) {
-        window.location.href = 'leader.html'; return;
+    if (roles.includes('admin')) {
+        window.location.href = 'admin.html';
+        return;
     }
+    // 리더/일반 사용자 모두 dashboard.html 사용
     window.location.href = 'dashboard.html';
 }
 ```
@@ -231,18 +233,25 @@ function redirectBasedOnRoles(userData) {
 - 첫 로그인 시 비밀번호 변경 강제
 - Firebase Auth 계정 자동 생성 (employees 컬렉션 기반)
 
-### 8.2 dashboard.html (일반 사용자)
+### 8.2 dashboard.html (통합 대시보드) - 2026-02-02 업데이트
+**일반 사용자 기능:**
 - 제안서 작성 폼 (기본정보, 내용, 유형효과, 자체평가)
+- 유형효과 금액 입력 시 천단위 구분 기호 자동 적용
 - 내 제안서 목록 조회
 - 알림 확인
 - 리더 권한자는 상위 결재라인 선택 가능
 
-### 8.3 leader.html (리더/평가자)
-- 결재 대기 목록
+**리더/평가자 기능 (2026-02-02 통합):**
+- 결재 대기 목록 (로그인 시 자동 로드)
 - 평가 모달 (노력도, 창의성, 품질효과, 안전효과, 평가의견)
 - 승인/수정요청/반려 처리
 - 검증 완료된 유형효과 정보 표시
 - 60점 기준 분기 처리 (60점 이하 종료, 60점 초과 2차 이관)
+- 유형효과 검증 완료 전 제안서는 결재 대기 목록에서 제외
+
+### 8.3 leader.html [DEPRECATED]
+> **주의**: 2026-02-02부터 더 이상 사용하지 않음. 백업용으로만 유지.
+> 모든 평가 기능은 dashboard.html로 통합됨.
 
 ### 8.4 verifier.html (유형효과 검증)
 - 검증 대기 목록
@@ -323,13 +332,20 @@ npm run dev  # Netlify Dev 서버 실행 (http://localhost:8888)
 ### 11.2 빌드 및 배포
 ```bash
 npm run build  # dist 폴더에 HTML 파일 복사
-# Netlify가 Git push 시 자동 배포
+git add . && git commit -m "변경사항" && git push
+# GitHub push 시 Netlify 자동 배포 (2026-02-02 설정)
 ```
 
-### 11.3 Netlify 환경 변수
+### 11.3 GitHub 연동 (2026-02-02 설정)
+- **저장소**: https://github.com/Lovida82/suggestion-system.git
+- **브랜치**: master
+- **자동 배포**: GitHub push 시 Netlify가 자동으로 빌드 및 배포
+- **빌드 설정**: Netlify에서 "No build command" 선택 (정적 파일 직접 배포)
+
+### 11.4 Netlify 환경 변수
 | 변수 | 설명 |
 |------|------|
-| `OPENAI_API_KEY` | OpenAI API 키 |
+| `OPENAI_API_KEY` | OpenAI API 키 (Netlify 웹 콘솔에서 설정) |
 
 ---
 
@@ -347,8 +363,9 @@ FirebaseError: Missing or insufficient permissions
 - **해결**: 로그인 로직에서 문서 재생성 로직 확인
 
 ### 12.3 유형효과 검증 버튼 비활성화
-- **원인**: 제안서의 `hasTypicalEffect`가 false이거나 `effectVerification.status`가 'verified'가 아님
+- **원인**: 제안서의 `hasTypicalEffect`가 false이거나 `effectVerification.status`가 'completed'가 아님
 - **해결**: 제안서 상태 및 검증 상태 확인
+- **참고**: verifier.html에서 검증 완료 시 status를 'completed'로 설정함
 
 ---
 
@@ -359,7 +376,50 @@ FirebaseError: Missing or insufficient permissions
 - `leader.html`: 파일 상단 주석 (라인 1-77)
 - `CHANGELOG.md`: 전체 변경 이력
 
-### 13.2 최근 주요 변경사항 (2026-01-20)
+### 13.2 최근 주요 변경사항 (2026-02-02)
+
+**[리더/사용자 페이지 통합]**
+1. 모든 비관리자 사용자가 dashboard.html 사용하도록 변경
+   - index.html의 redirectBasedOnRoles() 함수 수정
+   - 리더 권한자도 dashboard.html로 리다이렉트
+2. leader.html의 평가 모달을 dashboard.html에 통합
+   - 평가 모달 HTML/CSS/JS 이식
+   - openReviewModal, calculateReviewScore, approveSuggestion 등 함수 추가
+   - 60점 분기 로직 포함
+3. leader.html은 더 이상 사용하지 않음 (백업용 유지)
+
+**[결재 흐름 개선]**
+4. 유형효과 검증 완료 전 제안서 필터링
+   - loadPendingSuggestions()에서 검증 미완료 제안서 제외
+   - hasTypicalEffect=true이면서 effectVerification.status !== 'completed'인 제안서 제외
+5. 검증 상태 체크 수정
+   - 'verified' → 'completed'로 변경 (verifier.html 출력값과 일치)
+6. 리더 로그인 시 결재 대기 건수 자동 로드
+   - 초기 로드 시 loadPendingSuggestions() 호출 추가
+
+**[UX 개선]**
+7. Caps Lock 경고 추가 (index.html)
+   - 비밀번호 입력 시 Caps Lock 활성화 경고 표시
+   - checkCapsLock() 함수 추가
+8. 천단위 구분 기호 추가 (dashboard.html)
+   - 유형효과 금액 입력 필드에 천단위 구분 자동 적용
+   - formatSavingInput() 함수 추가
+
+**[배포 환경]**
+9. GitHub + Netlify CI/CD 설정
+   - GitHub 저장소: https://github.com/Lovida82/suggestion-system.git
+   - Git push 시 Netlify 자동 배포
+10. OpenAI API 키 보안 강화
+    - 하드코딩된 API 키 제거
+    - Netlify 환경 변수로 이동
+
+**[문서화]**
+11. 결재흐름_설계문서.md 생성
+    - 60점 분기 시스템 설명
+    - 점수 체계 및 등급 기준
+    - 시나리오별 처리 흐름
+
+### 13.3 이전 주요 변경사항 (2026-01-20)
 
 **[문서 업데이트]**
 1. CLAUDE.md 점수 체계 섹션 전면 수정 (실제 코드와 일치)
@@ -370,7 +430,7 @@ FirebaseError: Missing or insufficient permissions
 2. 통합테스트_시나리오.md v2.0 업데이트
 3. 통합테스트_체크리스트_20260120.md 신규 생성 (89개 항목)
 
-### 13.3 이전 주요 변경사항 (2026-01-14)
+### 13.4 이전 주요 변경사항 (2026-01-14)
 
 **[Phase 1] 버그 수정 및 리팩토링:**
 1. `index.html`: `switchTab` 함수 버그 수정 (전역 event 객체 참조 → 파라미터로 전달)
@@ -402,7 +462,7 @@ FirebaseError: Missing or insufficient permissions
 9. 프로젝트 빌드 완료 (dist 폴더)
 10. Firebase Firestore 보안 규칙 배포 완료
 
-### 13.4 이전 변경사항 (2025-01-27)
+### 13.5 이전 변경사항 (2025-01-27)
 1. 실시자 디폴트 설정 (제안자 정보 자동 입력)
 2. 우선순위 항목 삭제
 3. 자체평가 항목 텍스트 상세화 (노력도/창의성)
@@ -416,6 +476,7 @@ FirebaseError: Missing or insufficient permissions
 - `README.md`: 시스템 사용 가이드
 - `PRD.md`: 제품 요구사항 문서
 - `CHANGELOG.md`: 전체 변경 이력
+- `결재흐름_설계문서.md`: 60점 분기 시스템 및 결재 흐름 설계 (2026-02-02 신규)
 - `통합테스트_시나리오.md`: 4가지 유형별 통합테스트 시나리오 (v2.0, 2026-01-20 업데이트)
 - `통합테스트_체크리스트_20260120.md`: 실행용 테스트 체크리스트 (89개 항목)
 - `통합테스트_체크리스트.md`: 상세 테스트 체크리스트 (레거시)
