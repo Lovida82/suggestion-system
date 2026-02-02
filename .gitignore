@@ -28,3 +28,8 @@ _ul*
 
 # Binary files
 *.docx
+
+# Backup/temp JS files with sensitive data
+verifier_current.js
+verifier_backup.js
+leader_extracted.js
