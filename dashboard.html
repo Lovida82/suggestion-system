@@ -1347,13 +1347,13 @@
                 loadInitialData();
                 initializeForm();
 
-                // URL 파라미터로 특정 섹션 자동 열기
+                // URL 파라미터로 특정 페이지 자동 열기
                 const urlParams = new URLSearchParams(window.location.search);
                 const action = urlParams.get('action');
                 if (action === 'newSuggestion') {
-                    showSection('newSuggestion');
+                    showPage('create');
                 } else if (action === 'mySuggestions') {
-                    showSection('mySuggestions');
+                    showPage('mysuggestions');
                 }
             } catch (error) {
                 console.error('❌ 사용자 정보 로드 오류:', error);
