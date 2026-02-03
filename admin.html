@@ -405,7 +405,7 @@
                 <button class="nav-item" onclick="showSection(event, 'settings')">⚙️ 시스템 설정</button>
                 <button class="nav-item" onclick="showSection(event, 'evaluationCriteria')">📊 평가 기준 설정</button>
                 <button class="nav-item" onclick="showSection(event, 'orgchart')">👥 조직도 관리</button>
-                <!-- <button class="nav-item" onclick="showSection(event, 'approvers')">✍️ 결재자 관리</button> -->
+                <button class="nav-item" onclick="showSection(event, 'approvers')">👥 평가위원회 관리</button>
                 <button class="nav-item" onclick="showSection(event, 'categories')">📁 카테고리 관리</button>
                 <button class="nav-item" onclick="showSection(event, 'notices')">공지사항</button>
                 <button class="nav-item" onclick="showSection(event, 'users')">사용자 관리</button>
@@ -520,21 +520,20 @@
                 </div>
             </div>
 
-            <!-- 결재자 관리 섹션 (비활성화 - 추후 활용 가능) -->
-            <!--
+            <!-- 평가위원회 관리 섹션 -->
             <div id="approvers" class="content-section">
                 <div class="page-header">
-                    <h1 class="page-title">✍️ 결재자 관리</h1>
+                    <h1 class="page-title">👥 평가위원회 관리</h1>
                     <p style="color: rgba(255,255,255,0.8); font-size: 14px;">
-                        부서/팀별 결재 라인을 설정합니다. 결재자는 순서대로 자동 지정됩니다.
+                        부서/팀별 소위원회와 제안위원회를 설정합니다. 복수의 평가자가 병렬로 평가합니다.
                     </p>
                 </div>
 
                 <div class="card">
                     <div class="card-header">
-                        <h3 class="card-title">결재 라인 목록</h3>
-                        <button class="btn btn-primary" onclick="openApprovalLineModal()">
-                            + 새 결재 라인
+                        <h3 class="card-title">평가위원회 목록</h3>
+                        <button class="btn btn-primary" onclick="openCommitteeModal()">
+                            + 새 평가위원회
                         </button>
                     </div>
                     <div class="card-body">
@@ -542,13 +541,14 @@
                             <thead>
                                 <tr>
                                     <th>부서/팀</th>
-                                    <th>결재 라인</th>
+                                    <th>소위원회</th>
+                                    <th>제안위원회</th>
                                     <th style="width: 100px;">상태</th>
                                     <th style="width: 150px;">작업</th>
                                 </tr>
                             </thead>
-                            <tbody id="approvalLineList">
-                                결재 라인 목록이 여기에 동적으로 추가됩니다.
+                            <tbody id="committeeList">
+                                평가위원회 목록이 여기에 동적으로 추가됩니다.
                             </tbody>
                         </table>
                     </div>
@@ -581,47 +581,70 @@
                 </div>
             </div>
 
-            결재 라인 추가/수정 모달
-            <div id="approvalLineModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 2000; justify-content: center; align-items: center;">
-                <div style="background: white; border-radius: 16px; width: 90%; max-width: 700px; max-height: 90vh; display: flex; flex-direction: column;">
+            <!-- 평가위원회 설정 모달 -->
+            <div id="committeeModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 2000; justify-content: center; align-items: center;">
+                <div style="background: white; border-radius: 16px; width: 90%; max-width: 800px; max-height: 90vh; display: flex; flex-direction: column;">
                     <div style="padding: 24px; border-bottom: 1px solid #e9ecef; display: flex; justify-content: space-between; align-items: center;">
-                        <h2 id="approvalLineModalTitle" style="margin: 0; font-size: 20px;">새 결재 라인</h2>
-                        <button onclick="closeApprovalLineModal()" style="background: none; border: none; font-size: 24px; cursor: pointer;">&times;</button>
+                        <h2 id="committeeModalTitle" style="margin: 0; font-size: 20px;">새 평가위원회</h2>
+                        <button onclick="closeCommitteeModal()" style="background: none; border: none; font-size: 24px; cursor: pointer;">&times;</button>
                     </div>
                     <div style="padding: 30px; overflow-y: auto;">
-                        <input type="hidden" id="approvalLineId">
+                        <input type="hidden" id="committeeId">
                         <div class="form-group">
                             <label class="form-label">적용 부서</label>
-                            <select id="approvalLineDept" class="form-input"></select>
+                            <select id="committeeDept" class="form-input"></select>
                         </div>
 
                         <hr style="margin: 20px 0; border: none; border-top: 1px solid #e9ecef;">
 
-                        <div class="form-group">
+                        <!-- 소위원회 (1차 평가) -->
+                        <div class="form-group" style="background: #f8f9fa; padding: 20px; border-radius: 12px; margin-bottom: 20px;">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                                <label class="form-label" style="margin-bottom: 0;">결재자 순서</label>
-                                <button type="button" class="btn btn-sm btn-primary" onclick="addApproverField()">+ 결재자 추가</button>
+                                <h4 style="margin: 0; color: #0ea5e9;">📋 소위원회 (1차 평가)</h4>
+                                <span style="font-size: 12px; color: #666;">60점 이하 시 평가 종료</span>
                             </div>
-                            <div id="approverFieldsContainer">
-                                동적 결재자 필드가 여기에 추가됩니다.
+                            <p style="font-size: 13px; color: #666; margin-bottom: 15px;">
+                                모든 평가자가 평가를 완료하면 평균 점수로 확정됩니다. (Ctrl+클릭으로 복수 선택)
+                            </p>
+                            <select id="stage1Evaluators" class="form-input" multiple size="6" style="width: 100%;">
+                                <!-- 리더 목록 동적 로드 -->
+                            </select>
+                            <div style="margin-top: 10px; font-size: 12px; color: #666;">
+                                선택된 평가자: <span id="stage1Count">0</span>명
                             </div>
                         </div>
 
-                         <div class="form-group">
+                        <!-- 제안위원회 (2차 평가) -->
+                        <div class="form-group" style="background: #fff3cd; padding: 20px; border-radius: 12px; margin-bottom: 20px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                                <h4 style="margin: 0; color: #856404;">⭐ 제안위원회 (2차 평가)</h4>
+                                <span style="font-size: 12px; color: #666;">60점 초과 시 진행</span>
+                            </div>
+                            <p style="font-size: 13px; color: #666; margin-bottom: 15px;">
+                                소위원회 평균이 60점 초과 시 제안위원회가 추가 평가합니다.
+                            </p>
+                            <select id="stage2Evaluators" class="form-input" multiple size="5" style="width: 100%;">
+                                <!-- 리더 목록 동적 로드 -->
+                            </select>
+                            <div style="margin-top: 10px; font-size: 12px; color: #666;">
+                                선택된 평가자: <span id="stage2Count">0</span>명
+                            </div>
+                        </div>
+
+                        <div class="form-group">
                             <label class="form-label">상태</label>
-                            <select id="approvalLineStatus" class="form-input">
+                            <select id="committeeStatus" class="form-input">
                                 <option value="active">활성</option>
                                 <option value="inactive">비활성</option>
                             </select>
                         </div>
                     </div>
                     <div style="padding: 20px 30px; border-top: 1px solid #e9ecef; text-align: right; background: #f8f9fa;">
-                        <button class="btn" onclick="closeApprovalLineModal()" style="margin-right: 10px; background: #6c757d; color: white;">취소</button>
-                        <button class="btn btn-primary" onclick="saveApprovalLine()">저장</button>
+                        <button class="btn" onclick="closeCommitteeModal()" style="margin-right: 10px; background: #6c757d; color: white;">취소</button>
+                        <button class="btn btn-primary" onclick="saveCommittee()">저장</button>
                     </div>
                 </div>
-            </div>
-            -->            
+            </div>            
                         <!-- 카테고리 관리 섹션 -->            <div id="categories" class="content-section">
                 <div class="page-header">
                     <h1 class="page-title">카테고리 관리</h1>
@@ -2743,6 +2766,11 @@
                 loadCompletedSuggestions();
             }
 
+            // 평가위원회 관리 섹션을 열 때 데이터 로드
+            if (sectionName === 'approvers') {
+                loadCommittees();
+            }
+
             closeSidebar();
         }
 
@@ -3065,6 +3093,274 @@
             } catch (error) {
                 console.error("결재 라인 저장 오류:", error);
                 showToast('저장 중 오류가 발생했습니다: ' + error.message, 'error');
+            }
+        }
+
+        // =====================================================
+        // 복수 평가자 시스템 (평가위원회 관리)
+        // =====================================================
+
+        // 평가위원회 목록 로드
+        async function loadCommittees() {
+            try {
+                const snapshot = await db.collection('approvalLines').get();
+                approvalLines = [];
+                snapshot.forEach(doc => {
+                    approvalLines.push({ id: doc.id, ...doc.data() });
+                });
+                approvalLines.sort((a, b) => (a.department || '').localeCompare(b.department || ''));
+                displayCommittees();
+                await loadLeaders();
+            } catch (error) {
+                console.error('평가위원회 로드 오류:', error);
+                showToast('평가위원회를 불러오는데 실패했습니다.', 'error');
+            }
+        }
+
+        // 평가위원회 목록 표시
+        function displayCommittees() {
+            const tbody = document.getElementById('committeeList');
+            if (!tbody) return;
+
+            if (approvalLines.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; padding: 40px; color: #999;">평가위원회가 없습니다. 새 평가위원회를 추가해주세요.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = approvalLines.map(line => {
+                // 소위원회 평가자 표시
+                let stage1Html = '-';
+                if (line.committees && line.committees.stage1 && line.committees.stage1.evaluators) {
+                    const names = line.committees.stage1.evaluators.map(e => e.name);
+                    stage1Html = `<span style="color: #0ea5e9;">${names.length}명</span><br><small style="color: #666;">${names.slice(0, 3).join(', ')}${names.length > 3 ? ' 외' : ''}</small>`;
+                } else if (line.approvers && line.approvers.length > 0) {
+                    // 기존 구조 호환
+                    const level1 = line.approvers.find(a => a.level === 1);
+                    if (level1) stage1Html = `<span style="color: #999;">1명 (기존)</span><br><small>${level1.name}</small>`;
+                }
+
+                // 제안위원회 평가자 표시
+                let stage2Html = '-';
+                if (line.committees && line.committees.stage2 && line.committees.stage2.evaluators) {
+                    const names = line.committees.stage2.evaluators.map(e => e.name);
+                    stage2Html = `<span style="color: #856404;">${names.length}명</span><br><small style="color: #666;">${names.slice(0, 3).join(', ')}${names.length > 3 ? ' 외' : ''}</small>`;
+                } else if (line.approvers && line.approvers.length > 0) {
+                    // 기존 구조 호환
+                    const level2 = line.approvers.find(a => a.level === 2);
+                    if (level2) stage2Html = `<span style="color: #999;">1명 (기존)</span><br><small>${level2.name}</small>`;
+                }
+
+                return `
+                <tr>
+                    <td><strong>${line.department || '-'}</strong></td>
+                    <td>${stage1Html}</td>
+                    <td>${stage2Html}</td>
+                    <td>
+                        <span style="padding: 4px 12px; border-radius: 12px; font-size: 12px; background: ${line.active ? '#d4edda' : '#f8d7da'}; color: ${line.active ? '#155724' : '#721c24'};">
+                            ${line.active ? '활성' : '비활성'}
+                        </span>
+                    </td>
+                    <td>
+                        <button class="btn btn-sm btn-secondary" onclick="openCommitteeModal('${line.id}')" style="margin-right: 5px;">수정</button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteCommittee('${line.id}')">삭제</button>
+                    </td>
+                </tr>
+                `;
+            }).join('');
+        }
+
+        // 평가위원회 모달 열기
+        async function openCommitteeModal(lineId = null) {
+            await loadLeaders();
+            if (leaders.length === 0) {
+                showToast('리더가 없습니다. 조직도를 먼저 업로드하세요.', 'error');
+                return;
+            }
+
+            const modal = document.getElementById('committeeModal');
+            const title = document.getElementById('committeeModalTitle');
+            const idInput = document.getElementById('committeeId');
+            const deptSelect = document.getElementById('committeeDept');
+            const statusSelect = document.getElementById('committeeStatus');
+            const stage1Select = document.getElementById('stage1Evaluators');
+            const stage2Select = document.getElementById('stage2Evaluators');
+
+            // 부서 목록 로드
+            const departments = [...new Set(orgChartData.map(e => e.department).filter(d => d))].sort();
+            deptSelect.innerHTML = '<option value="">-- 부서 선택 --</option>' + departments.map(d => `<option value="${d}">${d}</option>`).join('');
+
+            // 리더 목록 로드 (두 셀렉트 모두)
+            const leaderOptions = leaders.map(l => `<option value="${l.employeeId}">${l.name} (${l.department || ''} - ${l.jobTitle || ''})</option>`).join('');
+            stage1Select.innerHTML = leaderOptions;
+            stage2Select.innerHTML = leaderOptions;
+
+            // 선택 변경 이벤트 리스너
+            stage1Select.onchange = () => updateEvaluatorCount('stage1');
+            stage2Select.onchange = () => updateEvaluatorCount('stage2');
+
+            if (lineId) {
+                title.textContent = '평가위원회 수정';
+                const line = approvalLines.find(l => l.id === lineId);
+                if (line) {
+                    idInput.value = lineId;
+                    deptSelect.value = line.department;
+                    statusSelect.value = line.active ? 'active' : 'inactive';
+
+                    // 소위원회 평가자 선택
+                    if (line.committees && line.committees.stage1 && line.committees.stage1.evaluators) {
+                        const ids = line.committees.stage1.evaluators.map(e => e.id);
+                        Array.from(stage1Select.options).forEach(opt => {
+                            opt.selected = ids.includes(opt.value);
+                        });
+                    } else if (line.approvers) {
+                        // 기존 구조 마이그레이션
+                        const level1 = line.approvers.find(a => a.level === 1);
+                        if (level1) {
+                            Array.from(stage1Select.options).forEach(opt => {
+                                opt.selected = opt.value === level1.id;
+                            });
+                        }
+                    }
+
+                    // 제안위원회 평가자 선택
+                    if (line.committees && line.committees.stage2 && line.committees.stage2.evaluators) {
+                        const ids = line.committees.stage2.evaluators.map(e => e.id);
+                        Array.from(stage2Select.options).forEach(opt => {
+                            opt.selected = ids.includes(opt.value);
+                        });
+                    } else if (line.approvers) {
+                        // 기존 구조 마이그레이션
+                        const level2 = line.approvers.find(a => a.level === 2);
+                        if (level2) {
+                            Array.from(stage2Select.options).forEach(opt => {
+                                opt.selected = opt.value === level2.id;
+                            });
+                        }
+                    }
+                } else {
+                    showToast('평가위원회를 찾을 수 없습니다.', 'error');
+                    return;
+                }
+            } else {
+                title.textContent = '새 평가위원회';
+                idInput.value = '';
+                deptSelect.value = '';
+                statusSelect.value = 'active';
+                Array.from(stage1Select.options).forEach(opt => opt.selected = false);
+                Array.from(stage2Select.options).forEach(opt => opt.selected = false);
+            }
+
+            updateEvaluatorCount('stage1');
+            updateEvaluatorCount('stage2');
+            modal.style.display = 'flex';
+        }
+
+        // 선택된 평가자 수 업데이트
+        function updateEvaluatorCount(stage) {
+            const select = document.getElementById(`${stage}Evaluators`);
+            const countSpan = document.getElementById(`${stage}Count`);
+            const selectedCount = Array.from(select.selectedOptions).length;
+            countSpan.textContent = selectedCount;
+        }
+
+        // 평가위원회 모달 닫기
+        function closeCommitteeModal() {
+            document.getElementById('committeeModal').style.display = 'none';
+        }
+
+        // 평가위원회 저장
+        async function saveCommittee() {
+            const id = document.getElementById('committeeId').value;
+            const department = document.getElementById('committeeDept').value;
+            const status = document.getElementById('committeeStatus').value;
+            const stage1Select = document.getElementById('stage1Evaluators');
+            const stage2Select = document.getElementById('stage2Evaluators');
+
+            if (!department) {
+                showToast('부서를 선택해주세요.', 'error');
+                return;
+            }
+
+            // 소위원회 평가자 수집
+            const stage1Evaluators = Array.from(stage1Select.selectedOptions).map(opt => {
+                const leader = leaders.find(l => l.employeeId === opt.value);
+                return leader ? { id: leader.employeeId, name: leader.name, jobTitle: leader.jobTitle || '' } : null;
+            }).filter(Boolean);
+
+            if (stage1Evaluators.length === 0) {
+                showToast('소위원회 평가자를 한 명 이상 선택해주세요.', 'error');
+                return;
+            }
+
+            // 제안위원회 평가자 수집
+            const stage2Evaluators = Array.from(stage2Select.selectedOptions).map(opt => {
+                const leader = leaders.find(l => l.employeeId === opt.value);
+                return leader ? { id: leader.employeeId, name: leader.name, jobTitle: leader.jobTitle || '' } : null;
+            }).filter(Boolean);
+
+            // committees 구조 생성
+            const committees = {
+                stage1: {
+                    name: '소위원회',
+                    evaluators: stage1Evaluators
+                }
+            };
+
+            if (stage2Evaluators.length > 0) {
+                committees.stage2 = {
+                    name: '제안위원회',
+                    evaluators: stage2Evaluators
+                };
+            }
+
+            // 기존 approvers 구조도 호환성을 위해 생성
+            const approvers = [];
+            stage1Evaluators.forEach((e, i) => {
+                if (i === 0) { // 첫 번째 평가자만 level 1로 설정 (기존 호환)
+                    approvers.push({ level: 1, id: e.id, name: e.name, jobTitle: e.jobTitle });
+                }
+            });
+            stage2Evaluators.forEach((e, i) => {
+                if (i === 0) { // 첫 번째 평가자만 level 2로 설정 (기존 호환)
+                    approvers.push({ level: 2, id: e.id, name: e.name, jobTitle: e.jobTitle });
+                }
+            });
+
+            const lineData = {
+                department: department,
+                active: status === 'active',
+                committees: committees,
+                approvers: approvers, // 기존 호환성 유지
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            };
+
+            try {
+                if (id) {
+                    await db.collection('approvalLines').doc(id).update(lineData);
+                    showToast('평가위원회가 수정되었습니다.', 'success');
+                } else {
+                    lineData.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+                    await db.collection('approvalLines').add(lineData);
+                    showToast('평가위원회가 추가되었습니다.', 'success');
+                }
+                closeCommitteeModal();
+                loadCommittees();
+            } catch (error) {
+                console.error('평가위원회 저장 오류:', error);
+                showToast('저장 중 오류가 발생했습니다: ' + error.message, 'error');
+            }
+        }
+
+        // 평가위원회 삭제
+        async function deleteCommittee(id) {
+            if (!confirm('이 평가위원회를 정말 삭제하시겠습니까?')) return;
+            try {
+                await db.collection('approvalLines').doc(id).delete();
+                showToast('평가위원회가 삭제되었습니다.', 'success');
+                loadCommittees();
+            } catch (error) {
+                console.error('평가위원회 삭제 오류:', error);
+                showToast('삭제 중 오류가 발생했습니다.', 'error');
             }
         }
 

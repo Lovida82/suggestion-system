@@ -1148,17 +1148,18 @@
                             <thead>
                                 <tr>
                                     <th style="width: 120px;">제안번호</th>
-                                    <th style="width: 100px;">제안자</th>
-                                    <th style="width: 100px;">부서</th>
+                                    <th style="width: 80px;">제안자</th>
+                                    <th style="width: 80px;">부서</th>
                                     <th>제안내용</th>
-                                    <th style="width: 100px;">접수일</th>
-                                    <th style="width: 80px;">자체평가</th>
-                                    <th style="width: 150px;">작업</th>
+                                    <th style="width: 90px;">접수일</th>
+                                    <th style="width: 70px;">자체평가</th>
+                                    <th style="width: 80px;">평가현황</th>
+                                    <th style="width: 100px;">작업</th>
                                 </tr>
                             </thead>
                             <tbody id="pendingList">
                                 <tr>
-                                    <td colspan="7" style="text-align: center; padding: 40px; color: #999;">
+                                    <td colspan="8" style="text-align: center; padding: 40px; color: #999;">
                                         로딩 중...
                                     </td>
                                 </tr>
@@ -2309,24 +2310,86 @@
                 }
 
                 const approvalLine = activeLineDoc.data();
-                const approvers = approvalLine.approvers || []; // Firestore에서 approvers 배열을 직접 사용
 
-                const firstApprover = approvers.find(a => a.level === 1);
+                // 복수 평가자 시스템(committees) 또는 기존 방식(approvers) 확인
+                let currentApproverId = null;
+                let currentEvaluation = null;
+                let evaluationsInit = null;
+                const approvalHistory = [];
 
-                if (!firstApprover || !firstApprover.id) {
-                    showToast('결재 라인에 1차 결재자가 지정되지 않았습니다. 관리자에게 문의하세요.', 'error');
-                    return;
+                if (approvalLine.committees && approvalLine.committees.stage1 && approvalLine.committees.stage1.evaluators) {
+                    // 복수 평가자 방식
+                    const stage1 = approvalLine.committees.stage1;
+                    const evaluatorIds = stage1.evaluators.map(e => e.id);
+
+                    if (evaluatorIds.length === 0) {
+                        showToast('소위원회 평가자가 설정되어 있지 않습니다. 관리자에게 문의하세요.', 'error');
+                        return;
+                    }
+
+                    currentApproverId = evaluatorIds[0]; // 기존 호환용
+                    currentEvaluation = {
+                        stage: 1,
+                        name: stage1.name || '소위원회',
+                        totalEvaluators: evaluatorIds.length,
+                        completedCount: 0,
+                        pendingEvaluators: evaluatorIds,
+                        completedEvaluators: []
+                    };
+                    evaluationsInit = {
+                        stage1: {
+                            status: 'in_progress',
+                            individual: [],
+                            average: null
+                        }
+                    };
+
+                    // 기존 호환용 approvalHistory
+                    approvalHistory.push({
+                        approverId: evaluatorIds[0],
+                        approverName: stage1.evaluators[0]?.name || '',
+                        status: 'pending',
+                        level: 1,
+                        assignedAt: new Date()
+                    });
+                } else {
+                    // 기존 단일 평가자 방식 (1명이지만 동일한 구조로 처리)
+                    const approvers = approvalLine.approvers || [];
+                    const firstApprover = approvers.find(a => a.level === 1);
+
+                    if (!firstApprover || !firstApprover.id) {
+                        showToast('결재 라인에 1차 결재자가 지정되지 않았습니다. 관리자에게 문의하세요.', 'error');
+                        return;
+                    }
+
+                    currentApproverId = firstApprover.id;
+
+                    // 기존 방식도 복수 평가자 구조로 통일 (1명짜리)
+                    currentEvaluation = {
+                        stage: 1,
+                        name: '소위원회',
+                        totalEvaluators: 1,
+                        completedCount: 0,
+                        pendingEvaluators: [firstApprover.id],
+                        completedEvaluators: []
+                    };
+                    evaluationsInit = {
+                        stage1: {
+                            status: 'in_progress',
+                            individual: [],
+                            average: null
+                        }
+                    };
+
+                    approvalHistory.push({
+                        approverId: firstApprover.id,
+                        approverName: firstApprover.name,
+                        status: 'pending',
+                        level: 1,
+                        assignedAt: new Date()
+                    });
                 }
 
-                const currentApproverId = firstApprover.id;
-                const approvalHistory = [{
-                    approverId: firstApprover.id,
-                    approverName: firstApprover.name,
-                    status: 'pending',
-                    level: 1,
-                    assignedAt: new Date()
-                }];
-                
                 const uploadedFileUrls = await uploadFiles();
                 
                 // 유형효과 데이터
@@ -2426,6 +2489,8 @@
                         verifierName: null,
                         verifiedAt: null
                     };
+                    // 유형효과가 있으면 검증자에게 먼저 보내야 하므로 currentEvaluation 설정 안 함
+                    // verifier.html에서 검증 완료 시 설정됨
                 } else {
                     suggestion.effectVerification = {
                         needsVerification: false,
@@ -2434,8 +2499,15 @@
                         verifiedAmount: 0,
                         typicalEffectScore: 0
                     };
+                    // 유형효과가 없으면 바로 소위원회로 보냄 - 복수 평가자 설정
+                    if (currentEvaluation) {
+                        suggestion.currentEvaluation = currentEvaluation;
+                    }
+                    if (evaluationsInit) {
+                        suggestion.evaluations = evaluationsInit;
+                    }
                 }
-                
+
                 await db.collection('suggestions').add(suggestion);
                 showToast('제안서가 제출되었습니다.', 'success');
                 
@@ -2721,37 +2793,110 @@
                 approvalLineId = activeLineDoc.id;
 
                 const approvalLine = activeLineDoc.data();
-                const approvers = approvalLine.approvers || [];
 
-                const firstApprover = approvers.find(a => a.level === 1);
+                // 복수 평가자 시스템(committees) 또는 기존 방식(approvers) 확인
+                let currentApproverId = null;
+                let currentEvaluation = null;
+                let evaluationsInit = null;
+                const approvalHistory = [];
 
-                if (!firstApprover || !firstApprover.id) {
-                    showToast('결재 라인에 1차 결재자가 지정되지 않았습니다. 관리자에게 문의하세요.', 'error');
-                    return;
+                if (approvalLine.committees && approvalLine.committees.stage1 && approvalLine.committees.stage1.evaluators) {
+                    // 복수 평가자 방식
+                    const stage1 = approvalLine.committees.stage1;
+                    const evaluatorIds = stage1.evaluators.map(e => e.id);
+
+                    if (evaluatorIds.length === 0) {
+                        showToast('소위원회 평가자가 설정되어 있지 않습니다. 관리자에게 문의하세요.', 'error');
+                        return;
+                    }
+
+                    currentApproverId = evaluatorIds[0]; // 기존 호환용
+                    currentEvaluation = {
+                        stage: 1,
+                        name: stage1.name || '소위원회',
+                        totalEvaluators: evaluatorIds.length,
+                        completedCount: 0,
+                        pendingEvaluators: evaluatorIds,
+                        completedEvaluators: []
+                    };
+                    evaluationsInit = {
+                        stage1: {
+                            status: 'in_progress',
+                            individual: [],
+                            average: null
+                        }
+                    };
+
+                    approvalHistory.push({
+                        approverId: evaluatorIds[0],
+                        approverName: stage1.evaluators[0]?.name || '',
+                        status: 'pending',
+                        level: 1,
+                        assignedAt: new Date()
+                    });
+                } else {
+                    // 기존 단일 평가자 방식 (1명이지만 동일한 구조로 처리)
+                    const approvers = approvalLine.approvers || [];
+                    const firstApprover = approvers.find(a => a.level === 1);
+
+                    if (!firstApprover || !firstApprover.id) {
+                        showToast('결재 라인에 1차 결재자가 지정되지 않았습니다. 관리자에게 문의하세요.', 'error');
+                        return;
+                    }
+
+                    currentApproverId = firstApprover.id;
+
+                    // 기존 방식도 복수 평가자 구조로 통일 (1명짜리)
+                    currentEvaluation = {
+                        stage: 1,
+                        name: '소위원회',
+                        totalEvaluators: 1,
+                        completedCount: 0,
+                        pendingEvaluators: [firstApprover.id],
+                        completedEvaluators: []
+                    };
+                    evaluationsInit = {
+                        stage1: {
+                            status: 'in_progress',
+                            individual: [],
+                            average: null
+                        }
+                    };
+
+                    approvalHistory.push({
+                        approverId: firstApprover.id,
+                        approverName: firstApprover.name,
+                        status: 'pending',
+                        level: 1,
+                        assignedAt: new Date()
+                    });
                 }
 
-                const currentApproverId = firstApprover.id;
-                const approvalHistory = [{
-                    approverId: firstApprover.id,
-                    approverName: firstApprover.name,
-                    status: 'pending',
-                    level: 1,
-                    assignedAt: new Date()
-                }];
-
                 // draft → pending으로 상태 변경 및 결재 정보 추가
-                await docRef.update({
+                const updateData = {
                     status: 'pending',
                     approvalLineId: approvalLineId,
                     currentApproverId: currentApproverId,
                     approvalHistory: approvalHistory,
                     submittedAt: firebase.firestore.FieldValue.serverTimestamp(),
                     updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-                });
+                };
+
+                // 유형효과가 없는 경우에만 복수 평가자 설정 (있으면 검증 후 설정됨)
+                if (!data.hasTypicalEffect) {
+                    if (currentEvaluation) {
+                        updateData.currentEvaluation = currentEvaluation;
+                    }
+                    if (evaluationsInit) {
+                        updateData.evaluations = evaluationsInit;
+                    }
+                }
+
+                await docRef.update(updateData);
 
                 // 결재자에게 알림 전송
                 await db.collection('notifications').add({
-                    userId: firstApprover.id,
+                    userId: currentApproverId,
                     title: '새로운 결재 요청',
                     message: `${data.proposer}님의 "${data.title}" 제안서가 결재 대기 중입니다.`,
                     type: 'approval',
@@ -3606,26 +3751,39 @@
 
         // ==================== 결재자 전용 함수 ====================
 
-        // 결재 대기 목록 로드
+        // 결재 대기 목록 로드 (복수 평가자 시스템 지원)
         async function loadPendingSuggestions() {
             if (!currentUser || !currentUser.employeeId) {
                 return;
             }
 
             try {
-                const snapshot = await db.collection('suggestions')
-                    .where('currentApproverId', '==', currentUser.employeeId)
-                    .where('status', '==', 'pending')
-                    .get();
+                // 두 가지 쿼리 병렬 실행 (기존 호환 + 신규 구조)
+                const [legacySnapshot, newSnapshot] = await Promise.all([
+                    // 기존 방식: currentApproverId 기반
+                    db.collection('suggestions')
+                        .where('currentApproverId', '==', currentUser.employeeId)
+                        .where('status', '==', 'pending')
+                        .get(),
+                    // 신규 방식: pendingEvaluators 배열 기반
+                    db.collection('suggestions')
+                        .where('currentEvaluation.pendingEvaluators', 'array-contains', currentUser.employeeId)
+                        .where('status', 'in', ['pending', 'evaluating'])
+                        .get()
+                ]);
 
                 const tbody = document.getElementById('pendingList');
                 if (!tbody) {
                     return;
                 }
 
+                // 중복 제거하면서 병합
+                const docMap = new Map();
+                legacySnapshot.docs.forEach(doc => docMap.set(doc.id, doc));
+                newSnapshot.docs.forEach(doc => docMap.set(doc.id, doc));
+
                 // 유형효과 검증이 필요하지만 아직 완료되지 않은 제안서 필터링
-                // (검증 완료 후에만 결재 대기 목록에 표시)
-                const filteredDocs = snapshot.docs.filter(doc => {
+                const filteredDocs = Array.from(docMap.values()).filter(doc => {
                     const data = doc.data();
                     // 유형효과가 없으면 바로 표시
                     if (!data.hasTypicalEffect) return true;
@@ -3633,23 +3791,21 @@
                     return data.effectVerification && data.effectVerification.status === 'completed';
                 });
 
-                // 클라이언트에서 정렬
+                // 클라이언트에서 정렬 (최신순)
                 const myPending = filteredDocs.sort((a, b) => {
                     const timeA = a.data().createdAt?.toDate?.() || new Date(0);
                     const timeB = b.data().createdAt?.toDate?.() || new Date(0);
-                    return timeB - timeA; // 최신순
+                    return timeB - timeA;
                 });
 
                 if (myPending.length === 0) {
                     tbody.innerHTML = `
                         <tr>
-                            <td colspan="7" style="text-align: center; padding: 40px; color: #999;">
+                            <td colspan="8" style="text-align: center; padding: 40px; color: #999;">
                                 결재 대기 중인 제안서가 없습니다.
                             </td>
                         </tr>
                     `;
-
-                    // 배지 업데이트
                     const badge = document.getElementById('pendingBadge');
                     if (badge) badge.textContent = '0';
                     return;
@@ -3657,12 +3813,29 @@
 
                 tbody.innerHTML = myPending.map(doc => {
                     const data = doc.data();
+
+                    // 평가 진행 현황 표시
+                    let progressHtml = '';
+                    if (data.currentEvaluation) {
+                        const ce = data.currentEvaluation;
+                        const total = ce.totalEvaluators || (ce.pendingEvaluators?.length || 0) + (ce.completedEvaluators?.length || 0);
+                        const completed = ce.completedCount || ce.completedEvaluators?.length || 0;
+                        progressHtml = `
+                            <div style="text-align: center;">
+                                <div style="font-size: 12px; color: #0ea5e9; font-weight: 600;">${ce.name || '평가'}</div>
+                                <div style="font-size: 11px; color: #666;">${completed}/${total} 완료</div>
+                            </div>
+                        `;
+                    } else {
+                        progressHtml = `<span style="color: #999; font-size: 12px;">기존 방식</span>`;
+                    }
+
                     return `
                         <tr>
-                            <td>${data.suggestionNumber}</td>
-                            <td>${data.proposer}</td>
-                            <td>${data.department}</td>
-                            <td><strong>${data.title}</strong></td>
+                            <td>${data.suggestionNumber || '-'}</td>
+                            <td>${data.proposer || '-'}</td>
+                            <td>${data.department || '-'}</td>
+                            <td><strong>${data.title || '-'}</strong></td>
                             <td>${formatDate(data.createdAt)}</td>
                             <td>
                                 <div style="text-align: center;">
@@ -3670,6 +3843,7 @@
                                     <div style="font-size: 11px; color: #999;">${data.scores?.self?.grade || '-'}</div>
                                 </div>
                             </td>
+                            <td>${progressHtml}</td>
                             <td>
                                 <button class="btn btn-primary btn-sm" onclick="openReviewModal('${doc.id}')">
                                     평가하기
@@ -3684,7 +3858,7 @@
                 if (badge) badge.textContent = myPending.length;
 
             } catch (error) {
-                console.error('❌ 결재 대기 목록 로드 오류:', error);
+                console.error('결재 대기 목록 로드 오류:', error);
                 showToast('목록을 불러오는데 실패했습니다.', 'error');
             }
         }
@@ -3975,7 +4149,32 @@
             currentSuggestion = null;
         }
 
-        // 승인 처리
+        // 평균 점수 계산 함수 (복수 평가자용)
+        function calculateAverageScores(individualScores) {
+            if (!individualScores || individualScores.length === 0) return null;
+
+            const count = individualScores.length;
+            const sum = individualScores.reduce((acc, s) => ({
+                effort: acc.effort + (s.scores?.effort || 0),
+                creativity: acc.creativity + (s.scores?.creativity || 0),
+                quality: acc.quality + (s.scores?.quality || 0),
+                safety: acc.safety + (s.scores?.safety || 0)
+            }), { effort: 0, creativity: 0, quality: 0, safety: 0 });
+
+            const avg = {
+                effort: Math.round(sum.effort / count),
+                creativity: Math.round(sum.creativity / count),
+                quality: Math.round(sum.quality / count),
+                safety: Math.round(sum.safety / count)
+            };
+            avg.intangibleEffect = Math.max(avg.quality, avg.safety);
+            avg.total = avg.effort + avg.creativity + avg.intangibleEffect;
+            avg.grade = calculateGrade(avg.total);
+
+            return avg;
+        }
+
+        // 승인 처리 (복수 평가자 시스템 지원)
         async function approveSuggestion() {
             const effort = parseInt(document.getElementById('reviewEffortScore').value);
             const creativity = parseInt(document.getElementById('reviewCreativityScore').value);
@@ -3989,117 +4188,269 @@
             }
 
             const intangibleEffect = Math.max(quality, safety);
-            const totalScore = effort + creativity + intangibleEffect;
-            const grade = calculateGrade(totalScore);
+            const myTotalScore = effort + creativity + intangibleEffect;
+            const myGrade = calculateGrade(myTotalScore);
 
-            if (!confirm('이 제안서를 승인하시겠습니까?')) return;
+            if (!confirm('이 제안서를 평가하시겠습니까?')) return;
 
             try {
                 const suggestionRef = db.collection('suggestions').doc(currentSuggestion.id);
                 const suggestionData = currentSuggestion;
 
-                // Get the approval line to find the next approver
-                const approvalLineDoc = await db.collection('approvalLines').doc(suggestionData.approvalLineId).get();
-                if (!approvalLineDoc.exists) {
-                    throw new Error('결재 라인 정보를 찾을 수 없습니다.');
-                }
-                const approvalLineData = approvalLineDoc.data();
-                const approvers = approvalLineData.approvers || [];
+                // 신규 복수 평가자 방식인지 확인
+                if (suggestionData.currentEvaluation && suggestionData.currentEvaluation.pendingEvaluators) {
+                    // ========== 복수 평가자 방식 (트랜잭션 사용) ==========
 
-                // 결재선 무결성 검증
-                if (approvers.length === 0) {
-                    throw new Error('결재선에 평가자가 설정되어 있지 않습니다.');
-                }
+                    // 트랜잭션 시작 전에 approvalLines 미리 조회 (2차 평가 이관용)
+                    const approvalLineDoc = await db.collection('approvalLines')
+                        .doc(suggestionData.approvalLineId).get();
+                    const approvalLineData = approvalLineDoc.exists ? approvalLineDoc.data() : null;
 
-                const currentStage = suggestionData.stage || 1;
-                const nextApprover = approvers.find(a => a.level === currentStage + 1);
+                    await db.runTransaction(async (transaction) => {
+                        const doc = await transaction.get(suggestionRef);
+                        if (!doc.exists) {
+                            throw new Error('제안서를 찾을 수 없습니다.');
+                        }
 
-                const newHistoryEntry = {
-                    approverId: currentUser.employeeId,
-                    approverName: currentUser.displayName,
-                    status: 'approved',
-                    level: currentStage,
-                    approvedAt: new Date(),
-                    scores: {
-                        effort: effort,
-                        creativity: creativity,
-                        quality: quality,
-                        safety: safety,
-                        intangibleEffect: intangibleEffect,
-                        total: totalScore,
-                        grade: grade
-                    },
-                    comment: comment
-                };
+                        const data = doc.data();
+                        const ce = data.currentEvaluation;
 
-                const stageKey = `stage${currentStage}`;
-                const updateData = {
-                    approvalHistory: firebase.firestore.FieldValue.arrayUnion(newHistoryEntry),
-                    [`scores.${stageKey}`]: {
-                        effort: effort,
-                        creativity: creativity,
-                        quality: quality,
-                        safety: safety,
-                        intangibleEffect: intangibleEffect,
-                        total: totalScore,
-                        grade: grade,
-                        comment: comment,
-                        evaluatorId: currentUser.employeeId,
-                        evaluatorName: currentUser.displayName,
-                        evaluatedAt: firebase.firestore.FieldValue.serverTimestamp()
-                    },
-                    totalScore: totalScore,
-                    grade: grade,
-                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-                };
+                        // 이미 평가했는지 확인
+                        if (ce.completedEvaluators && ce.completedEvaluators.includes(currentUser.employeeId)) {
+                            throw new Error('이미 평가를 완료했습니다.');
+                        }
 
-                // 소위원회(1단계) 평가인 경우, 60점 기준으로 흐름 결정
-                if (currentStage === 1) {
-                    if (totalScore <= 60) {
-                        // 60점 이하: 평가 종료 (제안위원회로 넘어가지 않음)
-                        updateData.currentApproverId = null;
-                        updateData.status = 'approved';
-                        showToast('소위원회 평가 완료! (60점 이하로 평가 종료)', 'success');
+                        // 현재 단계 확인
+                        const currentStage = ce.stage || 1;
+                        const stageKey = `stage${currentStage}`;
+
+                        // 개별 평가 결과 생성
+                        const myEvaluation = {
+                            evaluatorId: currentUser.employeeId,
+                            evaluatorName: currentUser.displayName,
+                            scores: {
+                                effort: effort,
+                                creativity: creativity,
+                                quality: quality,
+                                safety: safety,
+                                intangibleEffect: intangibleEffect,
+                                total: myTotalScore,
+                                grade: myGrade
+                            },
+                            comment: comment,
+                            evaluatedAt: new Date()
+                        };
+
+                        // 평가자 상태 업데이트
+                        const newPendingEvaluators = (ce.pendingEvaluators || []).filter(
+                            id => id !== currentUser.employeeId
+                        );
+                        const newCompletedEvaluators = [...(ce.completedEvaluators || []), currentUser.employeeId];
+                        const newCompletedCount = (ce.completedCount || 0) + 1;
+                        const totalEvaluators = ce.totalEvaluators ||
+                            ((ce.pendingEvaluators?.length || 0) + (ce.completedEvaluators?.length || 0));
+
+                        // 기존 개별 평가 목록 가져오기
+                        const existingIndividual = data.evaluations?.[stageKey]?.individual || [];
+                        const newIndividual = [...existingIndividual, myEvaluation];
+
+                        // 업데이트 데이터 구성
+                        const updateData = {
+                            [`evaluations.${stageKey}.individual`]: newIndividual,
+                            [`evaluations.${stageKey}.status`]: 'in_progress',
+                            'currentEvaluation.pendingEvaluators': newPendingEvaluators,
+                            'currentEvaluation.completedEvaluators': newCompletedEvaluators,
+                            'currentEvaluation.completedCount': newCompletedCount,
+                            'updatedAt': firebase.firestore.FieldValue.serverTimestamp()
+                        };
+
+                        // approvalHistory에도 추가 (기존 호환)
+                        const historyEntry = {
+                            approverId: currentUser.employeeId,
+                            approverName: currentUser.displayName,
+                            status: 'approved',
+                            level: currentStage,
+                            approvedAt: new Date(),
+                            scores: myEvaluation.scores,
+                            comment: comment
+                        };
+
+                        // 전원 평가 완료 확인
+                        if (newCompletedCount >= totalEvaluators) {
+                            // 평균 점수 계산
+                            const averageScores = calculateAverageScores(newIndividual);
+
+                            updateData[`evaluations.${stageKey}.status`] = 'completed';
+                            updateData[`evaluations.${stageKey}.average`] = averageScores;
+                            updateData[`evaluations.${stageKey}.completedAt`] = new Date();
+                            updateData[`scores.${stageKey}`] = averageScores;
+                            updateData.totalScore = averageScores.total;
+                            updateData.grade = averageScores.grade;
+
+                            // 60점 분기 처리
+                            if (currentStage === 1) {
+                                if (averageScores.total <= 60) {
+                                    // 평가 종료
+                                    updateData.status = 'approved';
+                                    updateData.currentEvaluation = null;
+                                    updateData.currentApproverId = null;
+                                } else {
+                                    // 2차 평가로 이관 (미리 조회한 approvalLineData 사용)
+                                    if (approvalLineData) {
+                                        const stage2 = approvalLineData.committees?.stage2;
+
+                                        if (stage2 && stage2.evaluators && stage2.evaluators.length > 0) {
+                                            updateData.stage = 2;
+                                            updateData.status = 'evaluating';
+                                            updateData.currentEvaluation = {
+                                                stage: 2,
+                                                name: stage2.name || '제안위원회',
+                                                totalEvaluators: stage2.evaluators.length,
+                                                completedCount: 0,
+                                                pendingEvaluators: stage2.evaluators.map(e => e.id),
+                                                completedEvaluators: []
+                                            };
+                                            updateData['evaluations.stage2'] = {
+                                                status: 'in_progress',
+                                                individual: [],
+                                                average: null
+                                            };
+                                        } else {
+                                            // 제안위원회 없으면 종료
+                                            updateData.status = 'approved';
+                                            updateData.currentEvaluation = null;
+                                            updateData.currentApproverId = null;
+                                        }
+                                    } else {
+                                        updateData.status = 'approved';
+                                        updateData.currentEvaluation = null;
+                                        updateData.currentApproverId = null;
+                                    }
+                                }
+                            } else {
+                                // 2차 평가 이상: 평가 종료
+                                updateData.status = 'approved';
+                                updateData.currentEvaluation = null;
+                                updateData.currentApproverId = null;
+                            }
+                        }
+
+                        // approvalHistory 배열 업데이트는 트랜잭션에서 arrayUnion 사용
+                        updateData.approvalHistory = firebase.firestore.FieldValue.arrayUnion(historyEntry);
+
+                        transaction.update(suggestionRef, updateData);
+                    });
+
+                    // 평가 완료 메시지
+                    const ce = suggestionData.currentEvaluation;
+                    const totalEvaluators = ce.totalEvaluators ||
+                        ((ce.pendingEvaluators?.length || 0) + (ce.completedEvaluators?.length || 0));
+                    const newCompletedCount = (ce.completedCount || 0) + 1;
+
+                    if (newCompletedCount >= totalEvaluators) {
+                        showToast(`${ce.name || '위원회'} 평가 완료! 평균 점수로 확정되었습니다.`, 'success');
+                    } else {
+                        showToast(`평가 제출 완료! (${newCompletedCount}/${totalEvaluators})`, 'success');
+                    }
+
+                } else {
+                    // ========== 기존 단일 평가자 방식 ==========
+                    const approvalLineDoc = await db.collection('approvalLines').doc(suggestionData.approvalLineId).get();
+                    if (!approvalLineDoc.exists) {
+                        throw new Error('결재 라인 정보를 찾을 수 없습니다.');
+                    }
+                    const approvalLineData = approvalLineDoc.data();
+                    const approvers = approvalLineData.approvers || [];
+
+                    if (approvers.length === 0) {
+                        throw new Error('결재선에 평가자가 설정되어 있지 않습니다.');
+                    }
+
+                    const currentStage = suggestionData.stage || 1;
+                    const nextApprover = approvers.find(a => a.level === currentStage + 1);
+
+                    const newHistoryEntry = {
+                        approverId: currentUser.employeeId,
+                        approverName: currentUser.displayName,
+                        status: 'approved',
+                        level: currentStage,
+                        approvedAt: new Date(),
+                        scores: {
+                            effort: effort,
+                            creativity: creativity,
+                            quality: quality,
+                            safety: safety,
+                            intangibleEffect: intangibleEffect,
+                            total: myTotalScore,
+                            grade: myGrade
+                        },
+                        comment: comment
+                    };
+
+                    const stageKey = `stage${currentStage}`;
+                    const updateData = {
+                        approvalHistory: firebase.firestore.FieldValue.arrayUnion(newHistoryEntry),
+                        [`scores.${stageKey}`]: {
+                            effort: effort,
+                            creativity: creativity,
+                            quality: quality,
+                            safety: safety,
+                            intangibleEffect: intangibleEffect,
+                            total: myTotalScore,
+                            grade: myGrade,
+                            comment: comment,
+                            evaluatorId: currentUser.employeeId,
+                            evaluatorName: currentUser.displayName,
+                            evaluatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                        },
+                        totalScore: myTotalScore,
+                        grade: myGrade,
+                        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                    };
+
+                    // 60점 분기
+                    if (currentStage === 1) {
+                        if (myTotalScore <= 60) {
+                            updateData.currentApproverId = null;
+                            updateData.status = 'approved';
+                            showToast('소위원회 평가 완료! (60점 이하로 평가 종료)', 'success');
+                        } else if (nextApprover && nextApprover.id) {
+                            updateData.currentApproverId = nextApprover.id;
+                            updateData.stage = currentStage + 1;
+                            showToast('소위원회 승인 완료! (60점 초과로 제안위원회 평가 진행)', 'success');
+                        } else {
+                            updateData.currentApproverId = null;
+                            updateData.status = 'approved';
+                            showToast('소위원회 평가 완료! (다음 평가자 없음)', 'success');
+                        }
                     } else if (nextApprover && nextApprover.id) {
-                        // 60점 초과: 제안위원회로 전달
                         updateData.currentApproverId = nextApprover.id;
                         updateData.stage = currentStage + 1;
-                        showToast('소위원회 승인 완료! (60점 초과로 제안위원회 평가 진행)', 'success');
+                        showToast('승인 완료! 다음 결재자에게 전달되었습니다.', 'success');
                     } else {
-                        // 제안위원회 설정이 없는 경우에도 종료
                         updateData.currentApproverId = null;
                         updateData.status = 'approved';
-                        showToast('소위원회 평가 완료! (다음 평가자 없음)', 'success');
+                        showToast('최종 승인 처리되었습니다!', 'success');
                     }
-                } else if (nextApprover && nextApprover.id) {
-                    // 제안위원회(2단계) 이상: 다음 단계로 이동
-                    updateData.currentApproverId = nextApprover.id;
-                    updateData.stage = currentStage + 1;
-                    showToast('승인 완료! 다음 결재자에게 전달되었습니다.', 'success');
-                } else {
-                    // 최종 승인 (더 이상의 승인자 없음)
-                    updateData.currentApproverId = null;
-                    updateData.status = 'approved';
-                    showToast('최종 승인 처리되었습니다!', 'success');
-                }
 
-                await suggestionRef.update(updateData);
+                    await suggestionRef.update(updateData);
+                }
 
                 // 알림 생성
                 await db.collection('notifications').add({
                     userId: suggestionData.userId,
-                    title: '제안서 승인',
-                    message: `${currentUser.displayName}님이 제안서를 승인했습니다.`,
+                    title: '제안서 평가',
+                    message: `${currentUser.displayName}님이 제안서를 평가했습니다.`,
                     type: 'evaluation',
                     read: false,
                     createdAt: firebase.firestore.FieldValue.serverTimestamp()
                 });
 
                 closeReviewModal();
-                loadPendingSuggestions(); // 결재 대기 목록 새로고침
+                loadPendingSuggestions();
 
             } catch (error) {
-                console.error('승인 처리 오류:', error);
+                console.error('평가 처리 오류:', error);
                 showToast('처리 중 오류가 발생했습니다: ' + error.message, 'error');
             }
         }
