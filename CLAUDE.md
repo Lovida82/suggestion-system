@@ -1,8 +1,8 @@
 # Claude Code 참고 문서 - 아주약품 제안제도 시스템
 
-**최종 업데이트:** 2026-02-02 (리더/사용자 페이지 통합, 결재 흐름 개선)
+**최종 업데이트:** 2026-02-03 (복수 평가자 시스템 구현)
 **프로젝트:** suggestion-system_251020_V3_multiuser
-**버전:** 3.3.0
+**버전:** 3.4.0
 **상태:** 운영 가능 (Production Ready)
 
 ---
@@ -14,6 +14,7 @@
 
 ### 1.2 핵심 기능
 - 2단계 평가 시스템 (1차 소위원회 → 2차 제안위원회, 60점 기준 분기)
+- **복수 평가자 병렬 평가** (소위원회/제안위원회 전원 평가 후 평균 점수 확정)
 - 유형효과 검증 프로세스 (금액 절감 제안에 대한 검증)
 - 복수 권한 시스템 (한 사용자가 여러 역할 수행 가능)
 - 실시간 진행 상황 추적
@@ -95,15 +96,73 @@ const firebaseConfig = {
 |--------|------|-----------|
 | `users` | 사용자 정보 | uid, employeeId, displayName, department, roles[], isEvaluator, passwordChanged |
 | `employees` | 직원 정보 (조직도) | employeeId, name, department, position, isLeader, leaderLevel, isActive |
-| `suggestions` | 제안서 | suggestionId, userId, title, content, status, hasTypicalEffect, effectVerification |
-| `approvalLines` | 결재 라인 | department, firstReviewer, secondReviewer, thirdReviewer |
+| `suggestions` | 제안서 | suggestionId, userId, title, content, status, hasTypicalEffect, effectVerification, **currentEvaluation**, **evaluations** |
+| `approvalLines` | 결재 라인 | department, approvers[], **committees** (신규 복수평가자 구조) |
 | `notifications` | 알림 | userId, message, read, createdAt |
 | `notices` | 공지사항 | title, content, createdAt |
 | `categories` | 카테고리 | name, order, isActive |
 | `evaluationCriteria` | 평가 기준 | criteria, scores |
 | `systemSettings` | 시스템 설정 | key, value |
 
-### 4.3 Firestore 보안 규칙 요약
+### 4.3 복수 평가자 데이터 구조 (2026-02-03 신규)
+
+**approvalLines.committees 구조:**
+```javascript
+{
+  department: "영업팀",
+  committees: {
+    stage1: {
+      name: "소위원회",
+      evaluators: [
+        { id: "A001", name: "팀장A" },
+        { id: "A002", name: "팀장B" },
+        { id: "A003", name: "팀장C" }
+      ]
+    },
+    stage2: {
+      name: "제안위원회",
+      evaluators: [
+        { id: "A101", name: "위원1" },
+        { id: "A102", name: "위원2" }
+      ]
+    }
+  },
+  approvers: [...]  // 기존 호환용 유지
+}
+```
+
+**suggestions.currentEvaluation 구조:**
+```javascript
+{
+  currentEvaluation: {
+    stage: 1,                           // 현재 평가 단계
+    name: "소위원회",                    // 위원회 이름
+    totalEvaluators: 3,                 // 총 평가자 수
+    pendingEvaluators: ["A001", "A002"], // 평가 대기 중인 평가자 ID
+    completedEvaluators: ["A003"]        // 평가 완료한 평가자 ID
+  },
+  evaluations: {
+    stage1: {
+      status: "in_progress",            // pending, in_progress, completed
+      individual: [                      // 개별 평가 결과 (점수 비공개)
+        { evaluatorId: "A003", scores: {...}, comment: "...", evaluatedAt: ... }
+      ],
+      average: null                      // 전원 완료 시 평균 점수
+    }
+  }
+}
+```
+
+### 4.4 필수 Firestore 인덱스
+
+| 컬렉션 | 필드 | 유형 |
+|--------|------|------|
+| suggestions | currentEvaluation.pendingEvaluators | 배열 포함 (array-contains) |
+| suggestions | status | 오름차순 |
+
+> Firebase Console에서 복합 인덱스 생성 필요
+
+### 4.5 Firestore 보안 규칙 요약
 - `employees`: 누구나 읽기 가능, admin만 쓰기 가능
 - `users`: 본인 또는 admin만 읽기/쓰기 가능
 - `suggestions`: 인증된 사용자만 읽기, 작성자/admin/평가자가 수정 가능
@@ -148,27 +207,34 @@ function redirectBasedOnRoles(userData) {
 
 ### 6.1 무형효과만 있는 경우 (최대 40점)
 ```
-[제안 제출] → [1차 평가(소위원회)] → [최종 확정]
+[제안 제출] → [1차 평가(소위원회 전원 병렬)] → [평균 점수 확정] → [최종 확정]
 ```
 > 무형효과만 있는 경우 최대 40점이므로 60점 초과가 불가능하여 1차에서 종료
 
 ### 6.2 유형효과가 있는 경우 (60점 이하)
 ```
-[제안 제출] → [유형효과 검증] → [1차 평가(소위원회)] → [최종 확정]
+[제안 제출] → [유형효과 검증] → [1차 평가(소위원회 전원 병렬)] → [평균 점수 확정] → [최종 확정]
 ```
 
 ### 6.3 유형효과가 있는 경우 (60점 초과)
 ```
-[제안 제출] → [유형효과 검증] → [1차 평가(소위원회)] → [2차 평가(제안위원회)] → [최종 확정]
+[제안 제출] → [유형효과 검증] → [1차 평가(소위원회 전원)] → [평균 60점 초과] → [2차 평가(제안위원회 전원)] → [최종 확정]
 ```
 
-### 6.3 제안서 상태 (status)
+### 6.4 복수 평가자 병렬 평가 규칙 (2026-02-03 신규)
+- **전원 평가 필수**: 소위원회/제안위원회 모든 평가자가 평가해야 평균 점수 확정
+- **점수 완전 비공개**: 각 평가자는 자신의 평가만 볼 수 있음 (다른 평가자 점수 비공개)
+- **평균 점수 계산**: 전원 평가 완료 시 노력도/창의성/품질/안전 각 항목 평균 계산
+- **60점 분기**: 평균 점수가 60점 초과 시 제안위원회로 이관, 60점 이하 시 최종 확정
+
+### 6.6 제안서 상태 (status)
 | 상태 | 설명 |
 |------|------|
 | `draft` | 임시저장 |
 | `pending` | 제출됨, 평가 대기 |
 | `verifying` | 유형효과 검증 중 |
 | `verified` | 검증 완료, 평가 대기 |
+| `evaluating` | 복수 평가자 평가 진행 중 (일부 완료) |
 | `reviewing` | 평가 진행 중 |
 | `revision_requested` | 수정 요청됨 |
 | `approved` | 승인됨 |
@@ -178,7 +244,7 @@ function redirectBasedOnRoles(userData) {
 
 ## 7. 평가 점수 체계 (2026-01-20 기준)
 
-### 7.1 평가자 평가 항목 (leader.html)
+### 7.1 평가자 평가 항목 (dashboard.html)
 | 항목 | 점수 범위 | 설명 |
 |------|----------|------|
 | **노력도** | 0~15점 | 투입된 노력 시간 기준 |
@@ -219,9 +285,11 @@ function redirectBasedOnRoles(userData) {
 | 9급 | 21~30점 | 3만원 |
 | 10급 | 0~20점 | 2만원 |
 
-### 7.4 60점 분기 로직
-- **60점 이하**: 1차 평가(소위원회)에서 최종 확정
-- **60점 초과**: 2차 평가(제안위원회)로 이관
+### 7.4 60점 분기 로직 (2026-02-03 업데이트)
+- **60점 이하**: 1차 평가(소위원회) **평균 점수**로 최종 확정
+- **60점 초과**: 2차 평가(제안위원회)로 이관, 제안위원회 **평균 점수**로 최종 확정
+
+> 복수 평가자 시스템에서는 전원 평가 완료 후 평균 점수를 기준으로 분기 결정
 
 ---
 
@@ -233,7 +301,7 @@ function redirectBasedOnRoles(userData) {
 - 첫 로그인 시 비밀번호 변경 강제
 - Firebase Auth 계정 자동 생성 (employees 컬렉션 기반)
 
-### 8.2 dashboard.html (통합 대시보드) - 2026-02-02 업데이트
+### 8.2 dashboard.html (통합 대시보드) - 2026-02-03 업데이트
 **일반 사용자 기능:**
 - 제안서 작성 폼 (기본정보, 내용, 유형효과, 자체평가)
 - 유형효과 금액 입력 시 천단위 구분 기호 자동 적용
@@ -241,30 +309,50 @@ function redirectBasedOnRoles(userData) {
 - 알림 확인
 - 리더 권한자는 상위 결재라인 선택 가능
 
-**리더/평가자 기능 (2026-02-02 통합):**
+**리더/평가자 기능 (2026-02-03 복수 평가자 지원):**
 - 결재 대기 목록 (로그인 시 자동 로드)
+  - 레거시 모드: `currentApproverId == employeeId` 쿼리
+  - 신규 모드: `currentEvaluation.pendingEvaluators array-contains employeeId` 쿼리
 - 평가 모달 (노력도, 창의성, 품질효과, 안전효과, 평가의견)
+  - 평가 진행 현황 표시 (예: "소위원회 1/3 완료")
+  - 다른 평가자 점수는 비공개
 - 승인/수정요청/반려 처리
+  - 트랜잭션 기반 동시성 제어
+  - 전원 평가 완료 시 자동 평균 계산
 - 검증 완료된 유형효과 정보 표시
 - 60점 기준 분기 처리 (60점 이하 종료, 60점 초과 2차 이관)
 - 유형효과 검증 완료 전 제안서는 결재 대기 목록에서 제외
+
+**핵심 함수 (복수 평가자):**
+- `loadPendingSuggestions()`: 레거시/신규 병렬 쿼리 지원
+- `approveSuggestion()`: 트랜잭션 기반 평가 저장 및 평균 계산
+- `calculateAverageScores()`: 개별 점수 배열에서 평균 계산
 
 ### 8.3 leader.html [DEPRECATED]
 > **주의**: 2026-02-02부터 더 이상 사용하지 않음. 백업용으로만 유지.
 > 모든 평가 기능은 dashboard.html로 통합됨.
 
-### 8.4 verifier.html (유형효과 검증)
+### 8.4 verifier.html (유형효과 검증) - 2026-02-03 업데이트
 - 검증 대기 목록
 - 예상 금액 검토 및 확정 금액 입력
 - 검증 의견 작성
 - AI 기반 검증 기준 제시 (OpenAI API)
+- **검증 완료 시 소위원회 초기화 (신규)**
+  - `currentEvaluation` 구조 설정
+  - `pendingEvaluators` 배열에 소위원회 전원 설정
+  - 레거시/신규 결재라인 모두 지원
 
-### 8.5 admin.html (관리자)
+### 8.5 admin.html (관리자) - 2026-02-03 업데이트
 - 대시보드 (통계)
 - 승인 대기/수정 요청/승인 완료 목록
 - 조직도 관리 (Excel 업로드)
 - 사용자 관리 (권한 설정)
 - 카테고리/평가기준/공지사항 관리
+- **평가위원회 관리 (신규)**
+  - 소위원회/제안위원회 복수 평가자 설정
+  - 부서별 위원회 구성
+  - 체크박스로 다중 선택
+  - `committees` 구조로 저장 (레거시 `approvers[]` 호환 유지)
 
 ---
 
@@ -376,7 +464,45 @@ FirebaseError: Missing or insufficient permissions
 - `leader.html`: 파일 상단 주석 (라인 1-77)
 - `CHANGELOG.md`: 전체 변경 이력
 
-### 13.2 최근 주요 변경사항 (2026-02-02)
+### 13.2 최근 주요 변경사항 (2026-02-03)
+
+**[복수 평가자 시스템 구현]**
+1. **admin.html - 평가위원회 관리 UI 추가**
+   - "평가위원회 관리" 메뉴 및 모달 추가
+   - 소위원회/제안위원회 복수 평가자 선택 (체크박스)
+   - `committees.stage1.evaluators[]`, `committees.stage2.evaluators[]` 구조로 저장
+   - 레거시 `approvers[]` 구조 호환 유지
+   - 함수: `loadCommittees()`, `displayCommittees()`, `openCommitteeModal()`, `saveCommittee()`
+
+2. **dashboard.html - 병렬 평가 로직 구현**
+   - `loadPendingSuggestions()` 듀얼 쿼리 지원
+     - 레거시: `currentApproverId == employeeId`
+     - 신규: `currentEvaluation.pendingEvaluators array-contains employeeId`
+   - `approveSuggestion()` 트랜잭션 기반 재작성
+     - 개별 평가 결과 저장 (`evaluations.stage1.individual[]`)
+     - `pendingEvaluators`에서 제거, `completedEvaluators`에 추가
+     - 전원 평가 완료 시 평균 계산 및 60점 분기 처리
+   - `calculateAverageScores()` 함수 신규 추가
+   - 제안서 제출 시 `currentEvaluation` 초기화 추가
+
+3. **verifier.html - 검증 완료 시 소위원회 초기화**
+   - `completeVerification()`에서 `currentEvaluation` 구조 설정
+   - 신규 모드: `pendingEvaluators`에 소위원회 전원 설정
+   - 레거시 모드: 단일 평가자도 `currentEvaluation` 구조로 통일
+
+4. **Firebase 인덱스 추가 필요**
+   - 컬렉션: `suggestions`
+   - 필드: `currentEvaluation.pendingEvaluators` (배열 포함) + `status` (오름차순)
+
+**[코드 리뷰 및 버그 수정]**
+5. 트랜잭션 내 외부 쿼리 오류 수정
+   - `approvalLines` 조회를 트랜잭션 외부로 이동
+6. `FieldValue.delete()` 트랜잭션 호환성 수정
+   - 트랜잭션 내에서 `null`로 대체
+7. 레거시 호환성 보완
+   - 기존 단일 평가자 결재라인도 `currentEvaluation` 구조 사용
+
+### 13.3 이전 주요 변경사항 (2026-02-02)
 
 **[리더/사용자 페이지 통합]**
 1. 모든 비관리자 사용자가 dashboard.html 사용하도록 변경
@@ -419,7 +545,7 @@ FirebaseError: Missing or insufficient permissions
     - 점수 체계 및 등급 기준
     - 시나리오별 처리 흐름
 
-### 13.3 이전 주요 변경사항 (2026-01-20)
+### 13.4 이전 주요 변경사항 (2026-01-20)
 
 **[문서 업데이트]**
 1. CLAUDE.md 점수 체계 섹션 전면 수정 (실제 코드와 일치)
@@ -430,7 +556,7 @@ FirebaseError: Missing or insufficient permissions
 2. 통합테스트_시나리오.md v2.0 업데이트
 3. 통합테스트_체크리스트_20260120.md 신규 생성 (89개 항목)
 
-### 13.4 이전 주요 변경사항 (2026-01-14)
+### 13.5 이전 주요 변경사항 (2026-01-14)
 
 **[Phase 1] 버그 수정 및 리팩토링:**
 1. `index.html`: `switchTab` 함수 버그 수정 (전역 event 객체 참조 → 파라미터로 전달)
@@ -462,7 +588,7 @@ FirebaseError: Missing or insufficient permissions
 9. 프로젝트 빌드 완료 (dist 폴더)
 10. Firebase Firestore 보안 규칙 배포 완료
 
-### 13.5 이전 변경사항 (2025-01-27)
+### 13.6 이전 변경사항 (2025-01-27)
 1. 실시자 디폴트 설정 (제안자 정보 자동 입력)
 2. 우선순위 항목 삭제
 3. 자체평가 항목 텍스트 상세화 (노력도/창의성)
